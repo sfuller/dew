@@ -1,5 +1,5 @@
 Dew
-=====
+===
 **D**\ evelopment **E**\ nvironment **W**\ rangler
 
 What is this?
@@ -32,7 +32,6 @@ Right now dewfiles look like this. Here is an example of a dewfile requiring the
 .. code-block:: json
 
     {
-        "cmake_generator": "Visual Studio 15",
         "dependencies":
         [
             {

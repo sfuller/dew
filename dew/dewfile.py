@@ -3,7 +3,7 @@
 class DewFile(object):
     def __init__(self):
         self.dependencies = []
-        self.cmake_generator = ''
+
 
 class Dependency(object):
     def __init__(self):
@@ -17,10 +17,10 @@ class DewFileParser(object):
     def __init__(self):
         self.data = None
 
-    def set_data(self, data):
+    def set_data(self, data) -> None:
         self.data = data
 
-    def parse(self):
+    def parse(self) -> DewFile:
         dependencies = []
         dependencies_obj = self.data['dependencies']
         for dep in dependencies_obj:
@@ -28,14 +28,12 @@ class DewFileParser(object):
 
         dewfile = DewFile()
         dewfile.dependencies = dependencies
-        dewfile.cmake_generator = self.data['cmake_generator']
         return dewfile
 
-    def parse_dependency(self, obj):
+    def parse_dependency(self, obj) -> Dependency:
         dep = Dependency()
         dep.name = obj['name']
         dep.url = obj['url']
         dep.type = obj['type']
         dep.ref = obj['ref']
         return dep
-
