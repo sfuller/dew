@@ -7,10 +7,12 @@ class DewFile(object):
 
 class Dependency(object):
     def __init__(self):
-        self.name = ""
-        self.url = "",
-        self.type = ""
-        self.ref = ""
+        self.name = ''
+        self.url = '',
+        self.type = ''
+        self.ref = ''
+        self.buildfile_dir = ''
+        self.build_arguments = []
 
 
 class DewFileParser(object):
@@ -36,4 +38,13 @@ class DewFileParser(object):
         dep.url = obj['url']
         dep.type = obj['type']
         dep.ref = obj['ref']
+        dep.buildfile_dir = obj.get('buildfile_dir', '')
+
+        build_arguments = obj.get('build_arguments', [])
+        if isinstance(build_arguments, str):
+            build_arguments = [build_arguments]
+
+        for arg in build_arguments:
+            dep.build_arguments.append(str(arg))
+
         return dep

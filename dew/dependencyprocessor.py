@@ -86,12 +86,19 @@ class DependencyProcessor(object):
     def get_src_dir(self):
         return os.path.join(self.storage.get_sources_dir(), self.dependency.name)
 
+    def get_buildfile_dir(self):
+        buildfile_dir = self.dependency.buildfile_dir
+        src_dir = self.get_src_dir()
+        if buildfile_dir:
+            return os.path.join(src_dir, buildfile_dir)
+        return self.get_src_dir()
+
     def get_build_dir(self):
         return os.path.join(self.storage.get_builds_dir(), self.dependency.name)
 
     def get_buildsystem(self):
         """ Guesses the build system """
-        src_path = self.get_src_dir()
+        src_path = self.get_buildfile_dir()
         if os.path.isfile(os.path.join(src_path, 'CMakeLists.txt')):
             return BuildSystem.CMAKE
         if os.path.isfile(os.path.join(src_path, 'Makefile')):
@@ -99,22 +106,23 @@ class DependencyProcessor(object):
         return BuildSystem.UNKNOWN
 
     def build_cmake(self):
-        src_dir = self.get_src_dir()
+        buildfile_dir = self.get_buildfile_dir()
         build_dir = self.get_build_dir()
         install_dir = self.storage.get_install_dir()
         os.makedirs(build_dir, exist_ok=True)
 
+        args = [
+            'cmake',
+            '-G', self.options.cmake_generator,
+            buildfile_dir,
+            '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
+            '-DCMAKE_PREFIX_PATH={0}'.format(install_dir),
+            '-DCMAKE_BUILD_TYPE=Debug'
+        ]
+        args.extend(self.dependency.build_arguments)
+
         # Configure
-        self.call(
-            [
-                'cmake',
-                '-G', self.options.cmake_generator,
-                src_dir,
-                '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
-                '-DCMAKE_PREFIX_PATH={0}'.format(install_dir)
-            ],
-            cwd=build_dir
-        )
+        self.call(args, cwd=build_dir)
 
         # Build
         self.call(
@@ -124,7 +132,7 @@ class DependencyProcessor(object):
 
         # Install
         self.call(
-            ['cmake', '-DCMAKE_INSTALL_CONFIG_NAME=Debug', '-P', 'cmake_install.cmake'],
+            ['cmake', '--build', '.', '--target', 'install'],
             cwd=build_dir
         )
 
@@ -143,3 +151,11 @@ class DependencyProcessor(object):
 
         if proc.returncode is not 0:
             raise BuildError()
+
+
+    def install_fake_cmake_config(self):
+        with open('', 'w') as f:
+            f.write(
+                'set(PACKAGE_FIND_NAME "{0}")'
+                'set(PACKAGE_FIND_VERSION)'
+            )
