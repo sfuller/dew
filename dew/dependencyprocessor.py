@@ -142,8 +142,10 @@ class DependencyProcessor(object):
 
     def call(self, args, cwd):
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
-        proc = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                              encoding='utf8')
+        proc = subprocess.run(
+            args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
 
         self.view.verbose('Process output:{0}{1}'.format(os.linesep, str(proc.stdout)))
         if len(proc.stderr) > 0:
