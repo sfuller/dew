@@ -2,7 +2,7 @@ import json
 import os.path
 import subprocess
 import shutil
-from enum import Enum, auto
+from enum import Enum
 
 from dew.buildoptions import BuildOptions
 from dew.dewfile import Dependency, DewFile, DewFileParser
@@ -13,9 +13,9 @@ from dew.view import View
 
 
 class BuildSystem(Enum):
-    UNKNOWN = auto()
-    CMAKE = auto()
-    MAKEFILE = auto()
+    UNKNOWN = 0
+    CMAKE = 1
+    MAKEFILE = 2
 
 
 class DependencyProcessor(object):
@@ -72,7 +72,7 @@ class DependencyProcessor(object):
 
     def pull_git(self):
         dest_dir = self.get_src_dir()
-        git.clone_repo(self.dependency.url, dest_dir, self.dependency.ref)
+        git.update_repo(self.dependency.url, dest_dir, self.dependency.ref)
 
     def pull_local(self):
         dest_dir = self.get_src_dir()
@@ -151,7 +151,6 @@ class DependencyProcessor(object):
 
         if proc.returncode is not 0:
             raise BuildError()
-
 
     def install_fake_cmake_config(self):
         with open('', 'w') as f:
