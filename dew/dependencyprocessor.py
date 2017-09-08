@@ -5,7 +5,7 @@ import shutil
 from enum import Enum
 
 from dew.buildoptions import BuildOptions
-from dew.dewfile import Dependency, DewFile, DewFileParser
+from dew.dewfile import Dependency, DewFile, DewFileParser, Fix
 from dew.exceptions import BuildError, PullError
 from dew.storage import StorageController
 from dew import git
@@ -54,6 +54,8 @@ class DependencyProcessor(object):
         else:
             self.view.error('Cannot build, unkown build system')
             raise BuildError()
+
+        self.apply_fixes()
 
     def has_dewfile(self) -> bool:
         dewfile_path = os.path.join(self.get_src_dir(), 'dewfile.json')
@@ -160,3 +162,23 @@ class DependencyProcessor(object):
                 'set(PACKAGE_FIND_NAME "{0}")'
                 'set(PACKAGE_FIND_VERSION)'
             )
+
+    def apply_fixes(self):
+        for fix in self.dependency.fixes:
+            self.apply_fix(fix)
+
+    def apply_fix(self, fix: Fix):
+        if fix.type == 'includeconfig':
+            self.apply_includeconfig_fix(fix)
+
+    def apply_includeconfig_fix(self, fix: Fix):
+        include_path = fix.params['include_path']
+        package_name = fix.params['package_name']
+        config_file_path = os.path.join(
+            self.storage.get_install_dir(), 'lib', 'cmake', package_name, '{0}Config.cmake'.format(package_name)
+        )
+        os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+        with open(config_file_path, 'w') as f:
+            f.writelines([
+                'include(${{CMAKE_CURRENT_LIST_DIR}}/{0})'.format(include_path)
+            ])
