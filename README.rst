@@ -25,6 +25,8 @@ Installing and Usage
 
 Run dew in a directory which contains a ``dewfile.json`` file.
 
+Note: dew requires python 3.4 and above.
+
 What does a dewfile look like?
 ------------------------------
 Right now dewfiles look like this. Here is an example of a dewfile requiring the dependency glfw:

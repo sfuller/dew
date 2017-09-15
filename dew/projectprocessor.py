@@ -8,11 +8,12 @@ from dew.view import View
 
 class ProjectProcessor(object):
 
-    def __init__(self, storage: StorageController, options: BuildOptions, view: View):
+    def __init__(self, storage: StorageController, options: BuildOptions, view: View, skip_download: bool):
         self.storage = storage
         self.root_dewfile = None
         self.options = options
         self.view = view
+        self.skip_download = skip_download
 
     def set_data(self, dewfile: DewFile):
         self.root_dewfile = dewfile
@@ -30,7 +31,7 @@ class ProjectProcessor(object):
             for dep in dewfile.dependencies:
                 graph.add_dependency(dep.name, parent_name)
 
-                dep_processor = DependencyProcessor(self.storage, self.view)
+                dep_processor = DependencyProcessor(self.storage, self.view, self.skip_download)
                 dependency_processors[dep.name] = dep_processor
 
                 dep_processor.set_data(dep, dewfile, self.options)

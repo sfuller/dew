@@ -19,12 +19,13 @@ class BuildSystem(Enum):
 
 
 class DependencyProcessor(object):
-    def __init__(self, storage: StorageController, view: View):
+    def __init__(self, storage: StorageController, view: View, skip_download: bool):
         self.storage = storage
         self.dependency = None
         self.dewfile = None
         self.options = None
         self.view = view
+        self.skip_download = skip_download
 
     def set_data(self, dependency: Dependency, dewfile: DewFile, options: BuildOptions):
         self.dependency = dependency
@@ -73,6 +74,8 @@ class DependencyProcessor(object):
             return None
 
     def pull_git(self):
+        if self.skip_download:
+            return
         dest_dir = self.get_src_dir()
         git.update_repo(self.dependency.url, dest_dir, self.dependency.ref)
 

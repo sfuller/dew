@@ -1,4 +1,4 @@
-from typing import List
+#from typing import List
 
 
 class DependencyGraphNode(object):
@@ -25,7 +25,7 @@ class DependencyGraph(object):
 
         parent_node.children.append(node)
 
-    def resolve(self) -> List[str]:
+    def resolve(self): # -> List[str]:
         # The dependency names in order
         deps = []
 

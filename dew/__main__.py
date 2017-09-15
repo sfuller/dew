@@ -41,7 +41,7 @@ def main() -> int:
     dewfile_parser.set_data(dewfile_data)
     dewfile = dewfile_parser.parse()
 
-    project_processor = ProjectProcessor(storage, options, view)
+    project_processor = ProjectProcessor(storage, options, view, args.skip_download)
     project_processor.set_data(dewfile)
 
     try:
