@@ -147,14 +147,26 @@ class DependencyProcessor(object):
 
     def call(self, args, cwd):
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             universal_newlines=True
         )
 
-        self.view.verbose('Process output:{0}{1}'.format(os.linesep, str(proc.stdout)))
-        if len(proc.stderr) > 0:
-            self.view.error(str(proc.stderr))
+        out_buffer = []
+        err_buffer = []
+
+        while proc.poll() is None:
+            try:
+                out, err = proc.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                out, err = proc.communicate()
+            out_buffer.append(out)
+            err_buffer.append(err)
+
+        self.view.verbose('Process output:{0}{1}'.format(os.linesep, ''.join(out_buffer)))
+        err_str = ''.join(err_buffer)
+        if len(err_str) > 0:
+            self.view.error(err_str)
 
         if proc.returncode is not 0:
             raise BuildError()
