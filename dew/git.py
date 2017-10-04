@@ -23,6 +23,9 @@ def fetch_and_checkout(repo, ref=None):
     head = repo.create_head(ref)
     head.checkout(force=True)
 
+    for submodule in repo.submodules:
+        submodule.update(init=True)
+
 
 def clone_repo(url, destination_dir, ref=None):
     kwargs = {
