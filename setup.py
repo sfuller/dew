@@ -9,6 +9,12 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+import sys
+
+# Sanity checks
+if sys.version_info.major < 3 or (sys.version_info.major is 3 and sys.version_info.minor < 6):
+    raise ValueError('Dew cannot be used with Python 3.5 or below.')
+
 
 here = path.abspath(path.dirname(__file__))
 
@@ -53,7 +59,7 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.6',
     ],
 
     # What does your project relate to?

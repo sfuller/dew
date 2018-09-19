@@ -1,6 +1,8 @@
 import os
 import json
 import sys
+import platform
+from typing import Dict, Union
 
 import dew
 from dew.buildoptions import BuildOptionsCache, BuildOptions
@@ -27,6 +29,13 @@ def main() -> int:
         options = BuildOptions()
 
     apply_argument_options(options, args)
+
+    if args.defines is not None:
+        for define in args.defines:
+            options.options[define] = True
+
+    options.options.update(get_builtin_options())
+
     options_cache.save_options(options)
 
     invalid_options = options.get_invalid_options()
@@ -56,6 +65,14 @@ def main() -> int:
 def apply_argument_options(options: BuildOptions, args) -> None:
     if args.cmake_generator:
         options.cmake_generator = args.cmake_generator
+
+
+def get_builtin_options() -> Dict[str, Union[str, bool]]:
+    options = {}
+    if platform.system() == 'Darwin':
+        if len(platform.mac_ver()[0]) > 0:
+            options['DEW_PLATFORM_MACOS'] = True
+    return options
 
 
 sys.exit(main())

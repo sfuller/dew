@@ -1,6 +1,7 @@
 import json
 import os.path
 # from typing import List
+from typing import Dict, Union
 
 from dew.storage import StorageController
 
@@ -8,6 +9,7 @@ from dew.storage import StorageController
 class BuildOptions(object):
     def __init__(self):
         self.cmake_generator = None
+        self.options: Dict[str, Union[str, bool]] = {}
 
     def get_invalid_options(self):  # -> List[str]:
         invalid_options = []

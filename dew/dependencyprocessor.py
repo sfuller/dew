@@ -16,6 +16,7 @@ class BuildSystem(Enum):
     UNKNOWN = 0
     CMAKE = 1
     MAKEFILE = 2
+    XCODE = 3
 
 
 class DependencyProcessor(object):
@@ -46,12 +47,17 @@ class DependencyProcessor(object):
             self.view.error('Cannot pull, unknown dependency type {0}'.format(type))
             raise PullError()
 
+        if self.dependency.execute_after_fetch:
+            self.call([self.dependency.execute_after_fetch], cwd=self.get_src_dir())
+
     def build(self):
         buildsystem = self.get_buildsystem()
-        if buildsystem == BuildSystem.MAKEFILE:
+        if buildsystem is BuildSystem.MAKEFILE:
             self.build_makefile()
-        elif buildsystem == BuildSystem.CMAKE:
+        elif buildsystem is BuildSystem.CMAKE:
             self.build_cmake()
+        elif buildsystem is BuildSystem.XCODE:
+            self.build_xcode()
         else:
             self.view.error('Cannot build, unkown build system')
             raise BuildError()
@@ -108,9 +114,14 @@ class DependencyProcessor(object):
             return BuildSystem.CMAKE
         if os.path.isfile(os.path.join(src_path, 'Makefile')):
             return BuildSystem.MAKEFILE
+
+        for path in os.listdir(src_path):
+            if path.endswith('.xcodeproj'):
+                return BuildSystem.XCODE
+
         return BuildSystem.UNKNOWN
 
-    def build_cmake(self):
+    def build_cmake(self) -> None:
         buildfile_dir = self.get_buildfile_dir()
         build_dir = self.get_build_dir()
         install_dir = self.storage.get_install_dir()
@@ -141,32 +152,46 @@ class DependencyProcessor(object):
             cwd=build_dir
         )
 
-    def build_makefile(self):
+    def build_makefile(self) -> None:
         self.view.error('Building makefile is not supported yet')
         raise BuildError()
 
+    def build_xcode(self) -> None:
+        build_dir = self.get_build_dir()
+        os.makedirs(build_dir, exist_ok=True)
+
+        # Figure out which xcodeproj path we are using
+        xcodeproj_path = ''
+        for path in os.listdir(os.path.join(self.get_buildfile_dir())):
+            if path.endswith('.xcodeproj'):
+                xcodeproj_path = os.path.join(self.get_buildfile_dir(), path)
+                break
+
+        if not xcodeproj_path:
+            self.view.error('Cannot determine the xcodeproj to build with.')
+            raise BuildError()
+
+        self.call(
+            [
+                'xcodebuild', '-project', xcodeproj_path,
+                'OBJROOT=' + os.path.join(build_dir, 'Intermediates'),
+                'BUILD_DIR=' + os.path.join(build_dir, 'Products'),
+                'SYMROOT=' + os.path.join(build_dir, 'Products'),
+                'build'
+            ],
+            cwd=self.get_build_dir()
+        )
+
     def call(self, args, cwd):
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
-        proc = subprocess.Popen(
+        proc = subprocess.run(
             args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             universal_newlines=True
         )
 
-        out_buffer = []
-        err_buffer = []
-
-        while proc.poll() is None:
-            try:
-                out, err = proc.communicate(timeout=1)
-            except subprocess.TimeoutExpired:
-                out, err = proc.communicate()
-            out_buffer.append(out)
-            err_buffer.append(err)
-
-        self.view.verbose('Process output:{0}{1}'.format(os.linesep, ''.join(out_buffer)))
-        err_str = ''.join(err_buffer)
-        if len(err_str) > 0:
-            self.view.error(err_str)
+        self.view.verbose('Process output:\n{0}'.format(proc.stdout))
+        if len(proc.stderr) > 0:
+            self.view.error(proc.stderr)
 
         if proc.returncode is not 0:
             raise BuildError()
