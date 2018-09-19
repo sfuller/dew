@@ -1,5 +1,6 @@
 import json
 import os.path
+import stat
 import subprocess
 import shutil
 from enum import Enum
@@ -89,7 +90,10 @@ class DependencyProcessor(object):
         dest_dir = self.get_src_dir()
         if os.path.exists(dest_dir):
             if os.path.isdir(dest_dir):
-                shutil.rmtree(dest_dir)
+                def remove_readonly(func, path, excinfo):
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                shutil.rmtree(dest_dir, onerror=remove_readonly)
             else:
                 os.remove(dest_dir)
         shutil.copytree(self.dependency.url, dest_dir)
