@@ -6,8 +6,9 @@ import shutil
 from typing import Dict, Union
 
 import dew.args
-from dew.args import Arguments
+from dew.args import Arguments, CommandType
 from dew.buildoptions import BuildOptionsCache, BuildOptions
+from dew.depstate import DependencyStateController
 from dew.dewfile import DewFileParser
 from dew.exceptions import DewError
 from dew.projectprocessor import ProjectProcessor
@@ -29,22 +30,28 @@ def main() -> int:
         print(f'dew {dew.VERSION_MAJOR}.{dew.VERSION_MINOR}.{dew.VERSION_PATCH}')
         return 0
 
-    if args.command == 'update':
+    if args.command == CommandType.UPDATE:
         return update(args, view)
-    if args.command == 'bootstrap':
-        return boostrap(args, view)
+    if args.command == CommandType.BOOTSTRAP:
+        return boostrap()
+    if args.command == CommandType.CLEAN:
+        return clean(args, view)
 
-    view.error(f'Don\'t know how to handle command {args.command}! This is a bug.')
+    view.error(f'Don\'t know how to handle command {args.command.value}! This is a bug.')
     return 1
 
 
-def update(args: Arguments, view: View) -> int:
+def get_storage(args: Arguments) -> StorageController:
     if args.output_path:
         storage_path = args.output_path
     else:
         storage_path = os.path.join(os.getcwd(), '.dew')
 
-    storage = StorageController(storage_path)
+    return StorageController(storage_path)
+
+
+def update(args: Arguments, view: View) -> int:
+    storage = get_storage(args)
     storage.ensure_directories_exist()
 
     options_cache = BuildOptionsCache(storage)
@@ -80,21 +87,35 @@ def update(args: Arguments, view: View) -> int:
     dewfile_parser.set_data(dewfile_data)
     dewfile = dewfile_parser.parse()
 
-    project_processor = ProjectProcessor(storage, options, view, args.skip_download)
+    depstates = DependencyStateController(storage)
+    depstates.load()
+
+    project_processor = ProjectProcessor(storage, options, view, depstates)
     project_processor.set_data(dewfile)
+
+    success = True
 
     try:
         project_processor.process()
-        if args.update_dummy_file:
-            with open(args.update_dummy_file, 'a'):
-                os.utime(args.update_dummy_file)
     except DewError:
         view.error('Dew did not finish successfully :(')
-        return 1
-    return 0
+        success = False
+
+    if success and args.update_dummy_file:
+        with open(args.update_dummy_file, 'a'):
+            os.utime(args.update_dummy_file, None)
+
+    depstates.save()
+
+    return 0 if success else 1
 
 
-def boostrap(args: Arguments, view: View) -> int:
+def clean(args: Arguments, view: View) -> int:
+    view.error('Not implemented yet!')
+    return 1
+
+
+def boostrap() -> int:
     src_path = os.path.join(__file__, '..', '..', 'cmake', 'dew.cmake')
     src_path = os.path.normpath(src_path)
     dest_path = os.path.join(os.getcwd(), 'dew.cmake')

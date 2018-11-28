@@ -25,7 +25,7 @@ Installing and Usage
 
 Run dew in a directory which contains a ``dewfile.json`` file.
 
-Note: dew requires python 3.4 and above.
+Note: dew requires python 3.6 and above.
 
 What does a dewfile look like?
 ------------------------------

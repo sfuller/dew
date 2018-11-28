@@ -23,7 +23,7 @@ set (dew_pypi_package_name "dew-pacman")
 # whenever you update your dewfile. This module also installs dew if it is not installed, which makes it easier for
 # others to build your project.
 #
-function(setup_dew dewfile_path)
+function(setup_dew target_name dewfile_path)
 
     #
     # Get name of python executable. We gotta add a '.exe' prefix if we're on windows, obviously.
@@ -48,7 +48,6 @@ function(setup_dew dewfile_path)
     set(ENV{PYTHONPATH} "${pythonpath}")
 
     set(venv_path "${CMAKE_CURRENT_BINARY_DIR}/dew_venv")
-    set(dew_dummyfile_path "${CMAKE_CURRENT_BINARY_DIR}/dew_venv_dummy")
 
     set(dew_python_executable "${PYTHON_EXECUTABLE}")
 
@@ -58,6 +57,8 @@ function(setup_dew dewfile_path)
     execute_process(
         COMMAND "${PYTHON_EXECUTABLE}" -m dew --version
         RESULT_VARIABLE dew_check_result
+        OUTPUT_VARIABLE dew_check_output
+        ERROR_VARIABLE  dew_check_error
     )
     if (NOT dew_check_result EQUAL 0)
         #
@@ -148,23 +149,22 @@ function(setup_dew dewfile_path)
     # Wow, dew is definitley installed by this point!
     #
     set(dew_output_path "${CMAKE_CURRENT_BINARY_DIR}/dew")
-    set(dew_cmake_prefix_path "${dew_output_path}/install")
+    set(dew_cmake_prefix_path "${dew_output_path}/prefix")
     set(dew_cmake_module_path "${dew_cmake_prefix_path}/share/cmake/Modules")
 
     #
     # Add a target to update dew when the dewfile changes.
     #
-    add_custom_command(
-        OUTPUT "${dew_dummyfile_path}"
+    add_custom_target(
+        "${target_name}"
         COMMAND
             "${CMAKE_COMMAND}" -E env "PYTHONPATH=${pythonpath}"
             "${dew_python_executable}" -m dew update
             --dewfile "${dewfile_path}"
             --output-path "${dew_output_path}"
-            --dummy-file "${dew_dummyfile_path}"
             --cmake-generator "${CMAKE_GENERATOR}"
             --cmake-executable "${CMAKE_COMMAND}"
-        DEPENDS
+        SOURCES
             "${dewfile_path}"
     )
 
@@ -178,7 +178,6 @@ function(setup_dew dewfile_path)
             "${dew_python_executable}" -m dew update
             --dewfile "${dewfile_path}"
             --output-path "${dew_output_path}"
-            --dummy-file "${dew_dummyfile_path}"
             --cmake-generator "${CMAKE_GENERATOR}"
             --cmake-executable "${CMAKE_COMMAND}"
         RESULT_VARIABLE dew_update_result

@@ -17,13 +17,12 @@ class Option(object):
 class Dependency(object):
     def __init__(self) -> None:
         self.name = ''
-        self.url = '',
+        self.url = ''
         self.type = ''
         self.ref = ''
         self.buildfile_dir = ''
         self.build_arguments = []
         self.fixes = []
-        self.execute_after_fetch = ''
 
 
 class Fix(object):

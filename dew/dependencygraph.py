@@ -1,22 +1,22 @@
-# from typing import List
+from typing import Dict, List
 
 
 class DependencyGraphNode(object):
-    def __init__(self):
-        self.name = ""
-        self.children = []
+    def __init__(self, name: str):
+        self.name = name
+        self.children: List[DependencyGraphNode] = []
+        self.parent: DependencyGraphNode = None
 
 
 class DependencyGraph(object):
     def __init__(self):
-        self.root = DependencyGraphNode()
-        self.nodes = {}
+        self.root = DependencyGraphNode('')
+        self.nodes: Dict[str, DependencyGraphNode] = {}
 
     def add_dependency(self, name: str, parent_name: str or None):
         node = self.nodes.get(name)
         if node is None:
-            node = DependencyGraphNode()
-            node.name = name
+            node = DependencyGraphNode(name)
             self.nodes[name] = node
 
         parent_node = self.root
@@ -24,10 +24,11 @@ class DependencyGraph(object):
             parent_node = self.nodes[parent_name]
 
         parent_node.children.append(node)
+        node.parent = parent_node
 
-    def resolve(self):  # -> List[str]:
+    def resolve(self) -> List[str]:
         # The dependency names in order
-        deps = []
+        deps: List[str] = []
 
         stack = [self.root]
 
@@ -46,14 +47,3 @@ class DependencyGraph(object):
                     deps.append(node.name)
 
         return deps
-
-
-
-
-
-
-
-
-
-
-

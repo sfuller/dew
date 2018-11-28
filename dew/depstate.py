@@ -1,60 +1,44 @@
-import copy
-import json
+import os
 
-from typing import Dict, Any
+from typing import Set
 
 from dew.storage import StorageController
-
-
-class DependencyStateInfo(object):
-    def __init__(self) -> None:
-        self.remote_type = ''
-        self.version = ''
 
 
 class DependencyStateController(object):
     def __init__(self, storage: StorageController) -> None:
         self.storage = storage
-        self.states: Dict[str, DependencyStateInfo] = {}
+        self.states: Set[str] = set()
 
-    def get_state(self, name: str) -> DependencyStateInfo:
-        info = self.states.get(name)
-        if info is None:
-            info = DependencyStateInfo()
-        else:
-            info = copy.copy(info)
-        return info
+    def get_state(self, label: str) -> bool:
+        return label in self.states
 
     def load(self) -> None:
+        if not os.path.isfile(self.get_state_file_path()):
+            return
+
         with open(self.get_state_file_path()) as f:
-            data = json.load(f)
+            contents = f.read()
+
+        lines = contents.split('\n')
 
         self.states.clear()
 
-        for key, value in data:
-            info = self.parse_state_info(value)
-            self.states[key] = info
-
-    def parse_state_info(self, data: Dict[str, Any]) -> DependencyStateInfo:
-        info = DependencyStateInfo()
-        info.remote_type = str(data.get('remote_type', ''))
-        info.version = str(data.get('version', ''))
-        return info
-
-    def serialize_state_info(self, info: DependencyStateInfo) -> Dict[str, Any]:
-        data = []
-        data['remote_type'] = info.remote_type
-        data['version'] = info.version
-        return data
-
-    def get_state_file_path(self) -> str:
-        return self.storage.join_storage_dir_path('depstate.json')
+        for line in lines:
+            if line:
+                self.states.add(line)
 
     def save(self) -> None:
-        data = []
-
-        for key, value in self.states:
-            data[key] = self.serialize_state_info(value)
+        contents = '\n'.join(self.states)
 
         with open(self.get_state_file_path(), 'w') as f:
-            json.dump(data, f)
+            f.write(contents)
+
+    def get_state_file_path(self) -> str:
+        return self.storage.join_storage_dir_path('depstates')
+
+    def clear(self) -> None:
+        self.states.clear()
+
+    def add(self, label: str):
+        self.states.add(label)

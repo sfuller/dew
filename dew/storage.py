@@ -1,4 +1,6 @@
 import os.path
+import shutil
+from typing import Callable
 
 
 class StorageController(object):
@@ -7,11 +9,17 @@ class StorageController(object):
         self.path = path
 
     def ensure_directories_exist(self):
-        os.makedirs(self.get_storage_dir(), exist_ok=True)
-        os.makedirs(self.get_sources_dir(), exist_ok=True)
-        os.makedirs(self.get_builds_dir(), exist_ok=True)
-        os.makedirs(self.get_downloads_dir(), exist_ok=True)
-        os.makedirs(self.get_install_dir(), exist_ok=True)
+        self.walk_directories(lambda p: os.makedirs(p, exist_ok=True))
+
+    def clean(self):
+        self.walk_directories(lambda p: shutil.rmtree(p))
+
+    def walk_directories(self, f: Callable[[str], None]):
+        f(self.get_storage_dir())
+        f(self.get_sources_dir())
+        f(self.get_builds_dir())
+        f(self.get_downloads_dir())
+        f(self.get_install_dir())
 
     def get_storage_dir(self):
         return self.join_storage_dir_path()
@@ -26,7 +34,10 @@ class StorageController(object):
         return self.join_storage_dir_path('downloads')
 
     def get_install_dir(self):
-        return self.join_storage_dir_path('install')
+        return self.join_storage_dir_path('prefix')
+
+    def get_temp_install_dir(self):
+        return self.join_storage_dir_path('temporary-prefixes')
 
     def join_storage_dir_path(self, *args):
         return os.path.join(self.path, *args)
