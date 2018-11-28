@@ -2,9 +2,11 @@ import os
 import json
 import sys
 import platform
+import shutil
 from typing import Dict, Union
 
-import dew
+import dew.args
+from dew.args import Arguments
 from dew.buildoptions import BuildOptionsCache, BuildOptions
 from dew.dewfile import DewFileParser
 from dew.exceptions import DewError
@@ -14,13 +16,35 @@ from dew.view import View
 
 
 def main() -> int:
-    parser = dew.make_argparser()
-    args = parser.parse_args()
+    parser = dew.args.make_argparser()
+    args = Arguments()
+
+    # noinspection PyTypeChecker
+    parser.parse_args(namespace=args)
 
     view = View()
-    view.show_verbose = True if args.v else False
+    view.show_verbose = True if args.verbose else False
 
-    storage = StorageController(os.getcwd())
+    if args.version:
+        print(f'dew {dew.VERSION_MAJOR}.{dew.VERSION_MINOR}.{dew.VERSION_PATCH}')
+        return 0
+
+    if args.command == 'update':
+        return update(args, view)
+    if args.command == 'bootstrap':
+        return boostrap(args, view)
+
+    view.error(f'Don\'t know how to handle command {args.command}! This is a bug.')
+    return 1
+
+
+def update(args: Arguments, view: View) -> int:
+    if args.output_path:
+        storage_path = args.output_path
+    else:
+        storage_path = os.path.join(os.getcwd(), '.dew')
+
+    storage = StorageController(storage_path)
     storage.ensure_directories_exist()
 
     options_cache = BuildOptionsCache(storage)
@@ -34,6 +58,8 @@ def main() -> int:
         for define in args.defines:
             options.options[define] = True
 
+    options.cmake_executable = args.cmake_executable
+
     options.options.update(get_builtin_options())
 
     options_cache.save_options(options)
@@ -44,8 +70,12 @@ def main() -> int:
                    'Please specify the correct values as arguments.'.format('\n'.join(invalid_options)))
         return 64
 
+    dewfile_path = 'dewfile.json'
+    if args.dewfile:
+        dewfile_path = args.dewfile
+
     dewfile_parser = DewFileParser()
-    with open('dewfile.json') as file:
+    with open(dewfile_path) as file:
         dewfile_data = json.load(file)
     dewfile_parser.set_data(dewfile_data)
     dewfile = dewfile_parser.parse()
@@ -55,10 +85,20 @@ def main() -> int:
 
     try:
         project_processor.process()
+        if args.update_dummy_file:
+            with open(args.update_dummy_file, 'a'):
+                os.utime(args.update_dummy_file)
     except DewError:
         view.error('Dew did not finish successfully :(')
         return 1
+    return 0
 
+
+def boostrap(args: Arguments, view: View) -> int:
+    src_path = os.path.join(__file__, '..', '..', 'cmake', 'dew.cmake')
+    src_path = os.path.normpath(src_path)
+    dest_path = os.path.join(os.getcwd(), 'dew.cmake')
+    shutil.copy(src_path, dest_path)
     return 0
 
 

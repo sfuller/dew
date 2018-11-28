@@ -131,8 +131,12 @@ class DependencyProcessor(object):
         install_dir = self.storage.get_install_dir()
         os.makedirs(build_dir, exist_ok=True)
 
+        cmake_executable = self.options.cmake_executable
+        if not cmake_executable:
+            cmake_executable = 'cmake'
+
         args = [
-            'cmake',
+            cmake_executable,
             '-G', self.options.cmake_generator,
             buildfile_dir,
             '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
@@ -146,13 +150,13 @@ class DependencyProcessor(object):
 
         # Build
         self.call(
-            ['cmake', '--build', '.'],
+            [cmake_executable, '--build', '.'],
             cwd=build_dir,
         )
 
         # Install
         self.call(
-            ['cmake', '--build', '.', '--target', 'install'],
+            [cmake_executable, '--build', '.', '--target', 'install'],
             cwd=build_dir
         )
 

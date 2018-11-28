@@ -28,8 +28,5 @@ class StorageController(object):
     def get_install_dir(self):
         return self.join_storage_dir_path('install')
 
-    def get_storage_dir_name(self):
-        return '.dew'
-
     def join_storage_dir_path(self, *args):
-        return os.path.join(self.path, self.get_storage_dir_name(), *args)
+        return os.path.join(self.path, *args)

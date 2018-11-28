@@ -11,6 +11,8 @@ from codecs import open
 from os import path
 import sys
 
+import dew
+
 # Sanity checks
 if sys.version_info.major < 3 or (sys.version_info.major is 3 and sys.version_info.minor < 6):
     raise ValueError('Dew cannot be used with Python 3.5 or below.')
@@ -28,7 +30,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.2.7',
+    version=f'{dew.VERSION_MAJOR}.{dew.VERSION_MINOR}.{dew.VERSION_PATCH}',
 
     description='Development Environment Wrangler',
     long_description=long_description,
