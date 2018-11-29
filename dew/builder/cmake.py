@@ -36,7 +36,8 @@ class CMakeBuilder(Builder):
             self.buildfile_dir,
             '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
             '-DCMAKE_PREFIX_PATH={0}'.format(install_dir),
-            '-DCMAKE_BUILD_TYPE=Debug'
+            '-DCMAKE_BUILD_TYPE=Debug',  # TODO: Support building dependencies in release mode.
+            '-DDEW_CMAKE_INTERGRATION_ENABLED=OFF'
         ]
         args.extend(self.dependency.build_arguments)
 

@@ -17,6 +17,8 @@ cmake_minimum_required(VERSION 3.2)
 # same version of dew.
 set (dew_pypi_package_name "dew-pacman")
 
+option(DEW_CMAKE_INTEGRATION_ENABLED "Integrate Dew into the build process and update automatically" ON)
+
 #
 # Call this function at the very very beginning of your CMakeLists.txt to integrate dew with your cmake project.
 # Note: This is not needed to use dew with your project, but doing so mean you will need to invoke dew manually
@@ -24,6 +26,14 @@ set (dew_pypi_package_name "dew-pacman")
 # others to build your project.
 #
 function(setup_dew target_name dewfile_path)
+
+    #
+    # Create dummy target if dew integration is disabled.
+    #
+    if (NOT DEW_CMAKE_INTEGRATION_ENABLED)
+        add_custom_target("${target_name}")
+        return()
+    endif()
 
     #
     # Get name of python executable. We gotta add a '.exe' prefix if we're on windows, obviously.
