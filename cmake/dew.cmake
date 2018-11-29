@@ -50,7 +50,15 @@ function(setup_dew target_name dewfile_path)
     # Find our python interpreter, and set up some python related variables. Also, set the current cmake system
     # environment to use our python path when running python commands during the CMake configure phase.
     #
-    find_package(PythonInterp 3.6 REQUIRED)
+    find_package(PythonInterp 3.6)
+
+    if (NOT PYTHONINTERP_FOUND)
+        message(FATAL_ERROR
+            "Python 3.6 not found. Dew will not function. To build without Dew, set the cache variable "
+            "DEW_CMAKE_INTEGRATION_ENABLED to OFF"
+        )
+    endif()
+
     set(pythonpath "")
     foreach(prefix_path ${CMAKE_PREFIX_PATH})
         set(pythonpath "${pythonpath}${sep}${prefix_path}/lib/python3")
@@ -174,7 +182,7 @@ function(setup_dew target_name dewfile_path)
             --output-path "${dew_output_path}"
             --cmake-generator "${CMAKE_GENERATOR}"
             --cmake-executable "${CMAKE_COMMAND}"
-        SOURCES
+        DEPENDS
             "${dewfile_path}"
     )
 

@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 
 from dew.subprocesscaller import SubprocessCaller
@@ -10,9 +11,9 @@ from dew.view import View
 class CMakeBuilder(Builder):
     def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
                  options: BuildOptions, caller: SubprocessCaller, view: View) -> None:
-        self.buildfile_dir = buildfile_dir
-        self.build_dir = build_dir
-        self.install_dir = install_dir
+        self.buildfile_dir = os.path.abspath(buildfile_dir)
+        self.build_dir = os.path.abspath(build_dir)
+        self.install_dir = os.path.abspath(install_dir)
         self.dependency = dependency
         self.options = options
         self.caller = caller
@@ -44,9 +45,14 @@ class CMakeBuilder(Builder):
         # Configure
         self.caller.call(args, cwd=self.build_dir)
 
+        build_args = [cmake_executable, '--build', '.']
+        generator = self.options.cmake_generator
+        if generator in ('Unix Makefiles', 'MinGW Makefiles'):
+            build_args.extend(('--', '-j', str(multiprocessing.cpu_count())))
+
         # Build
         self.caller.call(
-            [cmake_executable, '--build', '.'],
+            build_args,
             cwd=self.build_dir,
         )
 
