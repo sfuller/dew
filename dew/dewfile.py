@@ -1,3 +1,6 @@
+import os
+
+import json
 from typing import List, Any, Dict
 
 
@@ -87,3 +90,34 @@ class DewFileParser(object):
         fix.type = obj['type']
         fix.params = obj['params']
         return fix
+
+
+def overlay_dewfile(base: DewFile, overlay: DewFile) -> None:
+    for dependency in overlay.dependencies:
+        index = -1
+        for i, base_dependency in enumerate(base.dependencies):
+            if base_dependency.name == dependency.name:
+                index = i
+                break
+
+        if index != -1:
+            base.dependencies[index] = dependency
+
+
+def parse_dewfile_with_local_overlay(path: str) -> DewFile:
+    dewfile_parser = DewFileParser()
+    with open(path) as file:
+        dewfile_data = json.load(file)
+    dewfile_parser.set_data(dewfile_data)
+    dewfile = dewfile_parser.parse()
+
+    local_overlay_path = os.path.normpath(os.path.join(path, '..', 'dewfile.local.json'))
+    if os.path.isfile(local_overlay_path):
+        dewfile_parser = DewFileParser()
+        with open(local_overlay_path) as file:
+            overlaw_dewfile_data = json.load(file)
+        dewfile_parser.set_data(overlaw_dewfile_data)
+        local_dewfile = dewfile_parser.parse()
+        overlay_dewfile(dewfile, local_dewfile)
+
+    return dewfile

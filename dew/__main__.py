@@ -81,11 +81,7 @@ def update(args: Arguments, view: View) -> int:
     if args.dewfile:
         dewfile_path = args.dewfile
 
-    dewfile_parser = DewFileParser()
-    with open(dewfile_path) as file:
-        dewfile_data = json.load(file)
-    dewfile_parser.set_data(dewfile_data)
-    dewfile = dewfile_parser.parse()
+    dewfile = dew.dewfile.parse_dewfile_with_local_overlay(dewfile_path)
 
     depstates = DependencyStateController(storage)
     depstates.load()

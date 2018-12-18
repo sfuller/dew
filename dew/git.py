@@ -1,3 +1,5 @@
+import sys
+
 from typing import Optional, Tuple
 
 import git.repo
@@ -32,6 +34,8 @@ def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str]=No
 
     head = repo.create_head(path='dew-head', commit=head_commit)
     head.checkout(force=True)
+
+    failed_fetching_submodules = False
 
     for submodule in repo.submodules:
         submodule.update(init=True)

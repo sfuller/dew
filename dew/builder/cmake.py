@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+from typing import Iterable
 
 from dew.subprocesscaller import SubprocessCaller
 from dew.builder import Builder
@@ -10,7 +11,7 @@ from dew.view import View
 
 class CMakeBuilder(Builder):
     def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
-                 options: BuildOptions, caller: SubprocessCaller, view: View) -> None:
+                 options: BuildOptions, caller: SubprocessCaller, view: View, prefix_paths: Iterable[str]) -> None:
         self.buildfile_dir = os.path.abspath(buildfile_dir)
         self.build_dir = os.path.abspath(build_dir)
         self.install_dir = os.path.abspath(install_dir)
@@ -18,6 +19,7 @@ class CMakeBuilder(Builder):
         self.options = options
         self.caller = caller
         self.view = view
+        self.prefix_paths = list(prefix_paths)
 
     def get_cmake_executable(self) -> str:
         cmake_executable = self.options.cmake_executable
@@ -36,7 +38,7 @@ class CMakeBuilder(Builder):
             '-G', self.options.cmake_generator,
             self.buildfile_dir,
             '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
-            '-DCMAKE_PREFIX_PATH={0}'.format(install_dir),
+            '-DCMAKE_PREFIX_PATH={0}'.format(';'.join(self.prefix_paths)),
             '-DCMAKE_BUILD_TYPE=Debug',  # TODO: Support building dependencies in release mode.
             '-DDEW_CMAKE_INTEGRATION_ENABLED=OFF'
         ]

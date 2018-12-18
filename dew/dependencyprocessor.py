@@ -1,23 +1,19 @@
-import json
 import os.path
-import stat
-import subprocess
-import shutil
 from enum import Enum
-from typing import Optional
+from typing import Optional, Iterable
 
+import dew
 from dew.builder import Builder
 from dew.builder.cmake import CMakeBuilder
 from dew.builder.makefile import MakefileBuilder
 from dew.builder.xcode import XcodeBuilder
 from dew.buildoptions import BuildOptions
-from dew.dewfile import Dependency, DewFile, DewFileParser, Fix
+from dew.dewfile import Dependency, DewFile
 from dew.exceptions import BuildError, PullError
 from dew.remote import Remote
 from dew.remote.git import GitRemote
 from dew.remote.local import LocalRemote
 from dew.storage import StorageController
-from dew import git
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
 
@@ -46,8 +42,8 @@ class DependencyProcessor(object):
     def pull(self):
         self.get_remote().pull(self.get_source_dir())
 
-    def build(self, install_dir: str):
-        self.get_builder(install_dir).build()
+    def build(self, install_dir: str, input_prefixes: Iterable[str]):
+        self.get_builder(install_dir, input_prefixes).build()
 
     def get_remote(self) -> Optional[Remote]:
         if self._remote:
@@ -68,7 +64,7 @@ class DependencyProcessor(object):
         self._remote = factory(dependency=self.dependency)
         return self._remote
 
-    def get_builder(self, install_dir: str) -> Optional[Builder]:
+    def get_builder(self, install_dir: str, input_prefixes: Iterable[str]) -> Optional[Builder]:
         buildsystem = self.get_buildsystem()
         factory = None
 
@@ -89,6 +85,7 @@ class DependencyProcessor(object):
             buildfile_dir=self.get_buildfile_dir(),
             build_dir=self.get_build_dir(),
             install_dir=install_dir,
+            prefix_paths=input_prefixes,
             dependency=self.dependency,
             options=self.options,
             caller=caller,
@@ -102,11 +99,7 @@ class DependencyProcessor(object):
     def get_dewfile(self) -> DewFile or None:
         dewfile_path = os.path.join(self.get_source_dir(), 'dewfile.json')
         if os.path.isfile(dewfile_path):
-            parser = DewFileParser()
-            with open(dewfile_path) as f:
-                data = json.load(f)
-            parser.set_data(data)
-            return parser.parse()
+            return dew.dewfile.parse_dewfile_with_local_overlay(dewfile_path)
         else:
             return None
 

@@ -36,8 +36,8 @@ class StorageController(object):
     def get_install_dir(self):
         return self.join_storage_dir_path('prefix')
 
-    def get_temp_install_dir(self):
-        return self.join_storage_dir_path('temporary-prefixes')
+    def get_output_prefix_dir(self):
+        return self.join_storage_dir_path('output-prefixes')
 
     def join_storage_dir_path(self, *args):
         return os.path.join(self.path, *args)
