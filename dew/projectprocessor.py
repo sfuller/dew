@@ -132,8 +132,8 @@ class ProjectProcessor(object):
                             shutil.copy2(src_path, dst_path)
                         installed_files[prefix_neutral_path] = label
 
-        # if not success:
-        #     raise BuildError(f'Failed while installing files')
+        if not success:
+            raise BuildError(f'Failed while installing files')
 
     def get_label(self, name: str, version: str) -> str:
         return f'{name}_{version}'
