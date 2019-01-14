@@ -1,3 +1,4 @@
+import os
 import sys
 
 from typing import Optional, Tuple
@@ -5,12 +6,12 @@ from typing import Optional, Tuple
 import git.repo
 
 
-def update_repo(url: str, destination_dir: str, ref: Optional[str]=None) -> None:
+def update_repo(url: str, destination_dir: str, ref: Optional[str] = None) -> None:
     repo, origin = setup_repo(url, destination_dir)
     fetch_and_checkout(repo, origin, ref)
 
 
-def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str]=None) -> None:
+def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str] = None) -> None:
     if not ref:
         ref = 'master'
 
@@ -38,6 +39,16 @@ def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str]=No
     failed_fetching_submodules = False
 
     for submodule in repo.submodules:
+
+        # Hack around gitpython bug: https://github.com/gitpython-developers/GitPython/issues/730
+        if submodule.url.startswith('..'):
+            submodule_repo_name = submodule.url[3:]  # Strip off '../'
+            repo_parent_url, _ = os.path.split(origin.url)
+            actual_url = os.path.join(repo_parent_url, submodule_repo_name)
+            with submodule.config_writer() as writer:
+                writer.set('url', actual_url)
+
+        print(f'Processing submodule {submodule.name}')
         submodule.update(init=True)
 
 

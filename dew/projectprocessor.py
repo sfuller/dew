@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import Set, Iterable, Dict
+from typing import Set, Iterable, Dict, List
 
 from dew.buildoptions import BuildOptions
 from dew.dependencygraph import DependencyGraph
@@ -15,12 +15,13 @@ from dew.view import View
 class ProjectProcessor(object):
 
     def __init__(self, storage: StorageController, options: BuildOptions, view: View,
-                 depstates: DependencyStateController):
+                 depstates: DependencyStateController, additional_prefixes: Iterable[str]):
         self.storage = storage
         self.root_dewfile = None
         self.options = options
         self.view = view
         self.depstates = depstates
+        self.additional_prefixes: List[str] = list(additional_prefixes)
 
     def set_data(self, dewfile: DewFile):
         self.root_dewfile = dewfile
@@ -72,6 +73,7 @@ class ProjectProcessor(object):
             shutil.rmtree(output_prefix)
 
             input_prefixes = [self.get_isolated_prefix(l) for l in child_labels]
+            input_prefixes.extend(self.additional_prefixes)
 
             # Build and install
             dep_processor.build(output_prefix, input_prefixes)

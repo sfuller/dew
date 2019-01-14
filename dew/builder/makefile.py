@@ -1,14 +1,15 @@
+from typing import Iterable
+
 from dew.builder import Builder
 from dew.buildoptions import BuildOptions
 from dew.dewfile import Dependency
-from dew.exceptions import BuildError
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
 
 
 class MakefileBuilder(Builder):
     def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
-                 options: BuildOptions, caller: SubprocessCaller, view: View) -> None:
+                 options: BuildOptions, caller: SubprocessCaller, view: View, prefix_paths: Iterable[str]) -> None:
         self.buildfile_dir = buildfile_dir
         self.build_dir = build_dir
         self.install_dir = install_dir
@@ -16,7 +17,14 @@ class MakefileBuilder(Builder):
         self.options = options
         self.caller = caller
         self.view = view
+        self.prefix_paths = list(prefix_paths)
 
     def build(self) -> None:
-        self.view.error('Building makefiles is not supported yet')
-        raise BuildError()
+
+        self.caller.call([
+                'make',
+                f'DESTDIR={self.install_dir}'
+                'install'
+            ],
+            cwd=self.buildfile_dir
+        )

@@ -2,6 +2,7 @@ import multiprocessing
 import os
 from typing import Iterable
 
+from dew.exceptions import BuildError
 from dew.subprocesscaller import SubprocessCaller
 from dew.builder import Builder
 from dew.buildoptions import BuildOptions
@@ -33,19 +34,25 @@ class CMakeBuilder(Builder):
 
         cmake_executable = self.get_cmake_executable()
 
+        module_paths = [os.path.join(prefix, 'share', 'cmake', 'Modules') for prefix in self.prefix_paths]
+
         args = [
             cmake_executable,
             '-G', self.options.cmake_generator,
             self.buildfile_dir,
             '-DCMAKE_INSTALL_PREFIX={0}'.format(install_dir),
             '-DCMAKE_PREFIX_PATH={0}'.format(';'.join(self.prefix_paths)),
+            '-DCMAKE_MODULE_PATH={0}'.format(';'.join(module_paths)),
             '-DCMAKE_BUILD_TYPE=Debug',  # TODO: Support building dependencies in release mode.
             '-DDEW_CMAKE_INTEGRATION_ENABLED=OFF'
         ]
         args.extend(self.dependency.build_arguments)
 
+        # Lots of projects default to build shared libs instead of static. Let's add some consistency.
+        args.append('-DBUILD_SHARED_LIBS=OFF')
+
         # Configure
-        self.caller.call(args, cwd=self.build_dir)
+        self.caller.call(args, cwd=self.build_dir, error_exception=BuildError)
 
         build_args = [cmake_executable, '--build', '.']
         generator = self.options.cmake_generator
@@ -56,10 +63,12 @@ class CMakeBuilder(Builder):
         self.caller.call(
             build_args,
             cwd=self.build_dir,
+            error_exception=BuildError
         )
 
         # Install
         self.caller.call(
             [cmake_executable, '--build', '.', '--target', 'install'],
-            cwd=self.build_dir
+            cwd=self.build_dir,
+            error_exception=BuildError
         )

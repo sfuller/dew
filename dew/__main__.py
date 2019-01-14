@@ -1,5 +1,4 @@
 import os
-import json
 import sys
 import platform
 import shutil
@@ -75,7 +74,7 @@ def update(args: Arguments, view: View) -> int:
     if len(invalid_options) > 0:
         view.error('The following options are either unset or set to invalid values:\n{0}\n'
                    'Please specify the correct values as arguments.'.format('\n'.join(invalid_options)))
-        return 64
+        return 1
 
     dewfile_path = 'dewfile.json'
     if args.dewfile:
@@ -86,7 +85,7 @@ def update(args: Arguments, view: View) -> int:
     depstates = DependencyStateController(storage)
     depstates.load()
 
-    project_processor = ProjectProcessor(storage, options, view, depstates)
+    project_processor = ProjectProcessor(storage, options, view, depstates, args.additional_prefix_paths)
     project_processor.set_data(dewfile)
 
     success = True

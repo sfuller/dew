@@ -1,19 +1,19 @@
 import subprocess
-from typing import List
+from typing import List, Type
 
 from dew.view import View
 
 
 class SubprocessCallError(Exception):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 class SubprocessCaller(object):
     def __init__(self, view: View) -> None:
         self.view = view
 
-    def call(self, args: List[str], cwd: str) -> None:
+    def call(self, args: List[str], cwd: str, error_exception: Type[Exception]) -> None:
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
         proc = subprocess.run(
             args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -25,4 +25,4 @@ class SubprocessCaller(object):
             self.view.error(proc.stderr)
 
         if proc.returncode is not 0:
-            raise SubprocessCallError()
+            raise error_exception()

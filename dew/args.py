@@ -20,6 +20,7 @@ class Arguments(object):
         self.output_path = ''
         self.update_dummy_file = ''
         self.cmake_executable = ''
+        self.additional_prefix_paths: List[str] = []
 
 
 def make_argparser() -> argparse.ArgumentParser:
@@ -33,5 +34,5 @@ def make_argparser() -> argparse.ArgumentParser:
     parser.add_argument('--dummy-file', dest='update_dummy_file')
     parser.add_argument('--cmake-generator')
     parser.add_argument('--cmake-executable')
-
+    parser.add_argument('--prefix', dest='additional_prefix_paths', action='append')
     return parser
