@@ -1,9 +1,12 @@
 
 
 class Remote(object):
-    def pull(self, dest_dir: str) -> None:
+    def pull(self) -> None:
         pass
 
-    def get_version(self) -> str:
+    def get_latest_ref(self) -> str:
+        pass
+
+    def get_source_dir(self) -> str:
         pass
 

@@ -1,8 +1,9 @@
+import copy
 import os
 import shutil
-from typing import Set, Iterable, Dict, List
+from typing import Set, Iterable, Dict, List, Optional, Tuple
 
-from dew.buildoptions import BuildOptions
+from dew.projectproperties import ProjectProperties
 from dew.dependencygraph import DependencyGraph
 from dew.dependencyprocessor import DependencyProcessor
 from dew.depstate import DependencyStateController
@@ -14,55 +15,66 @@ from dew.view import View
 
 class ProjectProcessor(object):
 
-    def __init__(self, storage: StorageController, options: BuildOptions, view: View,
-                 depstates: DependencyStateController, additional_prefixes: Iterable[str]):
+    def __init__(self, storage: StorageController, options: ProjectProperties, view: View,
+                 depstates: DependencyStateController):
         self.storage = storage
-        self.root_dewfile = None
+        self.root_dewfile: Optional[DewFile] = None
         self.options = options
         self.view = view
         self.depstates = depstates
-        self.additional_prefixes: List[str] = list(additional_prefixes)
 
     def set_data(self, dewfile: DewFile):
-        self.root_dewfile = dewfile
+        self.root_dewfile = copy.deepcopy(dewfile)
 
     def process(self):
-        dewfile_stack = [(self.root_dewfile, None)]
+        dewfile_stack: List[Tuple[DewFile, Optional[str]]] = [(self.root_dewfile, None)]
 
         # Dependency processors by label
-        dependency_processors = {}
+        dependency_processors: Dict[str, DependencyProcessor] = {}
 
         graph = DependencyGraph()
-        deps_needing_rebuild: Set[str] = set()
+        deps_needing_build: Set[str] = set()
 
         while len(dewfile_stack) > 0:
             dewfile, parent_name = dewfile_stack.pop()
             for dep in dewfile.dependencies:
-                dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
-                label = self.get_label(dep.name, dep_processor.get_version())
-                dep_processor.set_label(label)
-                dependency_processors[label] = dep_processor
 
+                # Process local override
+                local_override = dewfile.local_overrides.get(dep.name)
+                if local_override:
+                    dep = copy.deepcopy(dep)
+                    dep.type = 'local'
+                    dep.url = local_override
+                    dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+                    dep.ref = dep_processor.get_remote().get_latest_ref()
+
+                dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+                label = dep_processor.get_label()
+                dependency_processors[label] = dep_processor
                 graph.add_dependency(label, parent_name)
 
-                if self.depstates.get_state(label):
-                    self.view.verbose(f'{label} is up to date.')
-                    continue
-
-                deps_needing_rebuild.add(label)
-
-                self.view.info('Pulling dependency {0}...'.format(label))
-                dep_processor.pull()
+                # if the dependency is up to date, don't bother pulling, as it's already been pulled.
+                if not self.depstates.get_state(label):
+                    self.view.info('Pulling dependency {0}...'.format(label))
+                    dep_processor.pull()
+                else:
+                    self.view.info(f'Dependency {label} already pulled.')
 
                 if dep_processor.has_dewfile():
                     dewfile_stack.append((dep_processor.get_dewfile(), label))
+
+        for name, processor in dependency_processors.items():
+            label = processor.get_label()
+            if not self.depstates.get_state(label):
+                deps_needing_build.add(label)
 
         labels_in_order = graph.resolve()
 
         for label in labels_in_order:
             dep_processor = dependency_processors[label]
 
-            if label not in deps_needing_rebuild:
+            if label not in deps_needing_build:
+                self.view.info(f'Dependency {label} already built.')
                 continue
 
             self.view.info('Building dependency {0}...'.format(dep_processor.dependency.name))
@@ -73,14 +85,14 @@ class ProjectProcessor(object):
             shutil.rmtree(output_prefix)
 
             input_prefixes = [self.get_isolated_prefix(l) for l in child_labels]
-            input_prefixes.extend(self.additional_prefixes)
+            input_prefixes.extend(self.options.prefixes)
 
             # Build and install
             dep_processor.build(output_prefix, input_prefixes)
 
             self.depstates.add(label)
 
-        if len(deps_needing_rebuild) > 0:
+        if len(deps_needing_build) > 0:
             self.update_final_prefix(labels_in_order)
 
     def get_isolated_prefix(self, label: str) -> str:
@@ -137,5 +149,10 @@ class ProjectProcessor(object):
         if not success:
             raise BuildError(f'Failed while installing files')
 
-    def get_label(self, name: str, version: str) -> str:
-        return f'{name}_{version}'
+    def update_refs(self) -> DewFile:
+        for dep in self.root_dewfile.dependencies:
+            if not dep.ref:
+                self.view.info(f'Dependency {dep.name} does not have an assigned ref, fetching one now.')
+                processor = DependencyProcessor(self.storage, self.view, dep, self.root_dewfile, self.options)
+                dep.ref = processor.get_remote().get_latest_ref()
+        return self.root_dewfile

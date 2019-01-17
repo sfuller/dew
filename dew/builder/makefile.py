@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from dew.builder import Builder
-from dew.buildoptions import BuildOptions
+from dew.projectproperties import ProjectProperties
 from dew.dewfile import Dependency
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
@@ -9,7 +9,7 @@ from dew.view import View
 
 class MakefileBuilder(Builder):
     def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
-                 options: BuildOptions, caller: SubprocessCaller, view: View, prefix_paths: Iterable[str]) -> None:
+                 options: ProjectProperties, caller: SubprocessCaller, view: View, prefix_paths: Iterable[str]) -> None:
         self.buildfile_dir = buildfile_dir
         self.build_dir = build_dir
         self.install_dir = install_dir

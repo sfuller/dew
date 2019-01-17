@@ -1,6 +1,10 @@
 import os
 import sys
 
+import traceback
+
+from dew.exceptions import DewfileError
+
 
 class View(object):
 
@@ -17,3 +21,8 @@ class View(object):
     def error(self, message):
         sys.stderr.write(message)
         sys.stderr.write(os.linesep)
+
+    def dewfile_error(self, e: DewfileError) -> None:
+        message = ''.join(traceback.format_exception(type(e.__cause__), e.__cause__, e.inner_tb))
+        self.error(message)
+        self.error(f'Failed to parse dewfile at path {e.file_path}')

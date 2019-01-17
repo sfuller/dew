@@ -1,42 +1,31 @@
 import os
-import sys
 
 from typing import Optional, Tuple
 
 import git.repo
 
 
-def update_repo(url: str, destination_dir: str, ref: Optional[str] = None) -> None:
-    repo, origin = setup_repo(url, destination_dir)
-    fetch_and_checkout(repo, origin, ref)
-
-
-def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str] = None) -> None:
-    if not ref:
-        ref = 'master'
-
-    fetch_info = None
+def fetch(origin: git.Remote, refspec: Optional[str] = None) -> None:
     need_to_fetch_all = False
+
     try:
-        fetch_info = origin.fetch(refspec=ref)[0]
+        origin.fetch(refspec=refspec)
     except git.GitCommandError as e:
         if 'unadvertised object' in e.stderr:
-            # The ref might have been an unadvertised object (e.g. github does not advertise individual commits and does
-            # now allow fetching an individual commit). If this is the case, we must fetch everything.
+            # The ref might have been an unadvertised object (e.g. github does not advertise individual commits and
+            # does not allow fetching an individual commit). If this is the case, we must fetch everything.
             need_to_fetch_all = True
         else:
             raise
 
     if need_to_fetch_all:
         origin.fetch()
-        head_commit = ref
-    else:
-        head_commit = fetch_info.ref.commit
 
-    head = repo.create_head(path='dew-head', commit=head_commit)
-    head.checkout(force=True)
 
-    failed_fetching_submodules = False
+def checkout(repo: git.Repo, origin: git.Remote, ref: str) -> None:
+    if repo.head.name != 'dew-head':
+        head = repo.create_head(path='dew-head', commit=ref)
+        head.checkout(force=True)
 
     for submodule in repo.submodules:
 
@@ -52,7 +41,7 @@ def fetch_and_checkout(repo: git.Repo, origin: git.Remote, ref: Optional[str] = 
         submodule.update(init=True)
 
 
-def setup_repo(url: str, destination_dir: str) -> Tuple[git.Repo, git.Remote]:
+def get_repo(url: str, destination_dir: str) -> Tuple[git.Repo, git.Remote]:
     repo: git.Repo = None
     origin: git.Remote = None
     try:
@@ -78,3 +67,17 @@ def setup_repo(url: str, destination_dir: str) -> Tuple[git.Repo, git.Remote]:
             origin.set_url(url, invalid_url)
 
     return repo, origin
+
+
+def get_latest_ref(origin: git.Remote, head_name: str) -> str:
+    ref: git.RemoteReference = None
+
+    for head_ref in origin.refs:
+        if head_ref.remote_head == head_name:
+            ref = head_ref
+            break
+
+    if ref is None:
+        raise ValueError('Could not find remote head!')
+
+    return ref.commit.hexsha
