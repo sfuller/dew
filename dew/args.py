@@ -25,7 +25,7 @@ class ArgumentData(object):
 def make_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--help', '-h', help='Show help information', action='store_true')
-    parser.add_argument('command', type=CommandType, nargs='?', choices=tuple(CommandType))
+    parser.add_argument('command', type=CommandType, help='Command to perform: ' + ', '.join(x.value for x in CommandType))
     parser.add_argument('-v', help='Be verbose', dest='verbose', action='store_true')
     parser.add_argument('--version', action='store_true')
     parser.add_argument('-D', action='append', dest='defines', help='Define the value of an option')

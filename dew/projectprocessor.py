@@ -7,7 +7,7 @@ from dew.projectproperties import ProjectProperties
 from dew.dependencygraph import DependencyGraph
 from dew.dependencyprocessor import DependencyProcessor
 from dew.depstate import DependencyStateController
-from dew.dewfile import DewFile
+from dew.dewfile import DewFile, Dependency
 from dew.exceptions import BuildError
 from dew.storage import StorageController
 from dew.view import View
@@ -38,17 +38,7 @@ class ProjectProcessor(object):
         while len(dewfile_stack) > 0:
             dewfile, parent_name = dewfile_stack.pop()
             for dep in dewfile.dependencies:
-
-                # Process local override
-                local_override = dewfile.local_overrides.get(dep.name)
-                if local_override:
-                    dep = copy.deepcopy(dep)
-                    dep.type = 'local'
-                    dep.url = local_override
-                    dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
-                    dep.ref = dep_processor.get_remote().get_latest_ref()
-
-                dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+                dep_processor = self.make_processor(dep, dewfile)
                 label = dep_processor.get_label()
                 dependency_processors[label] = dep_processor
                 graph.add_dependency(label, parent_name)
@@ -73,14 +63,21 @@ class ProjectProcessor(object):
         for label in labels_in_order:
             dep_processor = dependency_processors[label]
 
+            self.view.info('Building dependency {0}...'.format(label))
+
+            node = graph.nodes[label]
+            parent_node = node.parent
+
+            while parent_node and parent_node.name:
+                self.view.info(f'* which is needed by {parent_node.name}')
+                parent_node = parent_node.parent
+
             if label not in deps_needing_build:
                 self.view.info(f'Dependency {label} already built.')
                 continue
 
-            self.view.info('Building dependency {0}...'.format(dep_processor.dependency.name))
-
             # Prepare output prefix
-            child_labels = [n.name for n in graph.nodes[label].children]
+            child_labels = [n.name for n in node.children]
             output_prefix = self.get_isolated_prefix(label)
             shutil.rmtree(output_prefix)
 
@@ -93,26 +90,29 @@ class ProjectProcessor(object):
             self.depstates.add(label)
 
         if len(deps_needing_build) > 0:
-            self.update_final_prefix(labels_in_order)
+            # Final prefix only contains files from top-level dependencies. That's how dew works, okay?
+            top_level_labels: List[str] = []
+            for dep in self.root_dewfile.dependencies:
+                top_level_labels.append(self.make_processor(dep, self.root_dewfile).get_label())
+
+            self.update_final_prefix(top_level_labels)
+
+    def make_processor(self, dep: Dependency, dewfile: DewFile) -> DependencyProcessor:
+        local_override = dewfile.local_overrides.get(dep.name)
+        if local_override:
+            dep = copy.deepcopy(dep)
+            dep.type = 'local'
+            dep.url = local_override
+            dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+            dep.ref = dep_processor.get_remote().get_latest_ref()
+
+        dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+        return dep_processor
 
     def get_isolated_prefix(self, label: str) -> str:
         path = os.path.join(self.storage.get_output_prefix_dir(), label)
         os.makedirs(path, exist_ok=True)
         return path
-
-    def copy_prefix(self, src_prefix: str, dst_prefix: str) -> None:
-        for dirpath, dirnames, filenames in os.walk(src_prefix):
-            relpath = os.path.relpath(dirpath, src_prefix)
-            dst_dir = os.path.join(dst_prefix, relpath)
-
-            for dirname in dirnames:
-                os.makedirs(os.path.join(dst_dir, dirname), exist_ok=True)
-
-            for filename in filenames:
-                src_path = os.path.join(dirpath, filename)
-                dst_path = os.path.join(dst_dir, filename)
-
-                shutil.copy2(src_path, dst_path)
 
     def update_final_prefix(self, labels: Iterable[str]):
         success = True

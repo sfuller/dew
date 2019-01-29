@@ -61,7 +61,7 @@ class CMakeBuilder(Builder):
         # Setup environment
         env = {
             'PATH': os.environ.get('PATH'),
-            'C': self.properties.c_compiler_path,
+            'CC': self.properties.c_compiler_path,
             'CXX': self.properties.cxx_compiler_path
         }
 

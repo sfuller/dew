@@ -1,7 +1,9 @@
+import sys
+
 import argparse
 import os
 import platform
-from typing import Dict, Union
+from typing import Dict, Union, Optional, List
 
 import dew.args
 from dew.args import ArgumentData, CommandType
@@ -29,19 +31,41 @@ def main() -> int:
     parser = dew.args.make_argparser()
     args = ArgumentData()
 
-    # noinspection PyTypeChecker
-    _, remaining_args = parser.parse_known_args(namespace=args)
+    # If there is a help flag defined, figure out what the positional argument is. Turns out argparse is kinda lame.
+    argv: List[str] = sys.argv.copy()
+    del argv[0]
+    is_help = False
+    positional: Optional[str] = None
 
-    view = View()
-    view.show_verbose = True if args.verbose else False
+    if '-h' in argv or '--help' in argv:
+        is_help = True
+        is_parsing_param = False
+        for arg in argv:
+            if is_parsing_param:
+                continue
+            if len(arg) > 0:
+                if arg[0] == '-':
+                    if len(arg) == 1 or arg[1] == '-':
+                        is_parsing_param = True
+                    continue
 
-    if args.version:
+            positional = arg
+            break
+
+    if '--version' in argv:
         print(f'dew {dew.VERSION_MAJOR}.{dew.VERSION_MINOR}.{dew.VERSION_PATCH}')
         return 0
 
-    if args.help:
-        help(view, args, parser)
+    view = View()
+
+    if is_help:
+        help(view, positional, parser)
         return 1
+
+    # noinspection PyTypeChecker
+    _, remaining_args = parser.parse_known_args(namespace=args)
+
+    view.show_verbose = True if args.verbose else False
 
     # Default command
     if not args.command:
@@ -69,15 +93,26 @@ def get_module_argparser(module) -> argparse.ArgumentParser:
     return module.get_argparser()
 
 
-def help(view: View, args: ArgumentData, parser: argparse.ArgumentParser) -> None:
-    if args.command is not None:
-        command_module = command_module_map.get(args.command)
+def help(view: View, command: Optional[str], parser: argparse.ArgumentParser) -> None:
+    command_type = None
+    if command is not None:
+        for e in CommandType:
+            if e.value == command:
+                command_type = e
+                break
+
+        if command_type is None:
+            view.error(f'{command} is not a command!')
+            return
+
+    if command_type is not None:
+        command_module = command_module_map.get(command_type)
         command_parser = get_module_argparser(command_module)
-        module_help(view, args.command.value, command_parser)
+        module_help(view, command, command_parser)
         return
 
     parser.print_help()
-    view.info('Specify a command with the help flag for help on a specific command.')
+    view.info('\nSpecify a command with the help flag for help on a specific command.')
 
 
 def module_help(view: View, name: str, parser: argparse.ArgumentParser) -> None:

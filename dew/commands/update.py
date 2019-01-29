@@ -21,7 +21,7 @@ class ArgumentData(object):
 
 
 def get_argparser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--C', dest='c_compiler_path', help='Path to the C compiler')
     parser.add_argument('--CXX', dest='cxx_compiler_path', help='Path to the CXX compiler')
     parser.add_argument('--prefix', dest='additional_prefix_paths', action='append')

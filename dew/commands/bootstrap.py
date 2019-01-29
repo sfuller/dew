@@ -11,7 +11,7 @@ class ArgumentData(object):
 
 
 def get_argparser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=False)
     return parser
 
 

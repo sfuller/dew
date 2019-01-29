@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class DependencyGraphNode(object):
@@ -13,7 +13,7 @@ class DependencyGraph(object):
         self.root = DependencyGraphNode('')
         self.nodes: Dict[str, DependencyGraphNode] = {}
 
-    def add_dependency(self, name: str, parent_name: str or None):
+    def add_dependency(self, name: str, parent_name: Optional[str]):
         node = self.nodes.get(name)
         if node is None:
             node = DependencyGraphNode(name)
