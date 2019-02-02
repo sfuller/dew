@@ -56,6 +56,7 @@ class CMakeBuilder(Builder):
         args.extend(self.dependency.build_arguments)
 
         # Lots of projects default to build shared libs instead of static. Let's add some consistency.
+        # TODO: Need a system to choose the types of libraries desired.
         args.append('-DBUILD_SHARED_LIBS=OFF')
 
         # Setup environment

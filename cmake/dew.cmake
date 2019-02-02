@@ -91,8 +91,6 @@ function(setup_dew target_name dewfile_path)
             execute_process(
                 COMMAND "${PYTHON_EXECUTABLE}" -m ensurepip
                 RESULT_VARIABLE update_venv_result
-                OUTPUT_VARIABLE update_venv_output
-                ERROR_VARIABLE  update_venv_error
             )
             if (NOT update_venv_result EQUAL 0)
                 # ensurepip module failed not installed. Check if pip is installed, and cause an error if it's not installed.
@@ -108,21 +106,17 @@ function(setup_dew target_name dewfile_path)
             execute_process(
                 COMMAND "${PYTHON_EXECUTABLE}" -m pip install virtualenv
                 RESULT_VARIABLE update_venv_result
-                OUTPUT_VARIABLE update_venv_output
-                ERROR_VARIABLE  update_venv_error
             )
             if (NOT update_venv_result EQUAL 0)
-                message(FATAL_ERROR "Failed to install virtualenv with pip: result: ${update_venv_result}. stderr:\n${update_venv_error}")
+                message(FATAL_ERROR "Failed to install virtualenv with pip: result: ${update_venv_result}.")
             endif()
 
             execute_process(
                 COMMAND "${PYTHON_EXECUTABLE}" -m virtualenv "${venv_path}"
                 RESULT_VARIABLE update_venv_result
-                OUTPUT_VARIABLE update_venv_output
-                ERROR_VARIABLE  update_venv_error
             )
             if (NOT update_venv_result EQUAL 0)
-                message(FATAL_ERROR "Cannot update dew venv: result: ${update_venv_result}. stderr:\n${update_venv_error}")
+                message(FATAL_ERROR "Cannot update dew venv: result: ${update_venv_result}.")
             endif()
         endif()
 
@@ -154,11 +148,9 @@ function(setup_dew target_name dewfile_path)
                     "${CMAKE_COMMAND}" -E env "PYTHONPATH=${pythonpath}"
                     "${dew_python_executable}" -m pip install "${dew_pypi_package_name}"
                 RESULT_VARIABLE dew_install_result
-                OUTPUT_VARIABLE dew_install_output
-                ERROR_VARIABLE  dew_install_error
             )
             if (NOT dew_install_result EQUAL 0)
-                message(FATAL_ERROR "Failed to install dew to virtual env, code ${dew_install_result}.\nstderr:\n${dew_install_error}")
+                message(FATAL_ERROR "Failed to install dew to virtual env: ${dew_install_result}.")
             endif()
         endif()
     endif()
@@ -169,6 +161,21 @@ function(setup_dew target_name dewfile_path)
     set(dew_output_path "${CMAKE_CURRENT_BINARY_DIR}/dew")
     set(dew_cmake_prefix_path "${dew_output_path}/prefix")
     set(dew_cmake_module_path "${dew_cmake_prefix_path}/share/cmake/Modules")
+
+    #
+    # Determine prefixes to be used and collect them into an argument list
+    #
+    list(LENGTH CMAKE_PREFIX_PATH prefix_count)
+    set(dew_prefix_args "")
+    math(EXPR last_prefix_index "${prefix_count} - 1")
+    foreach (prefix_index RANGE "${last_prefix_index}")
+        list(GET CMAKE_PREFIX_PATH "${prefix_index}" prefix)
+        if (prefix STREQUAL dew_cmake_prefix_path)
+            # Make sure dew doesn't get passed a prefix that is it's own output prefix.
+            continue()
+        endif()
+        list(APPEND dew_prefix_args "--prefix" "${prefix}")
+    endforeach()
 
     #
     # Add a target to update dew when the dewfile changes.
@@ -198,11 +205,13 @@ function(setup_dew target_name dewfile_path)
             --output-path "${dew_output_path}"
             --cmake-generator "${CMAKE_GENERATOR}"
             --cmake-executable "${CMAKE_COMMAND}"
+            --C "${CMAKE_C_COMPILER}"
+            --CXX "${CMAKE_CXX_COMPILER}"
+            ${dew_prefix_args}
         RESULT_VARIABLE dew_update_result
-        ERROR_VARIABLE  dew_update_error
     )
     if (NOT dew_update_result EQUAL 0)
-        message(FATAL_ERROR "Failed to update dependencies with dew. code: ${dew_update_result}\nstderr:\n${dew_update_error}")
+        message(FATAL_ERROR "Failed to update dependencies with dew. code: ${dew_update_result}")
     endif()
 
     #

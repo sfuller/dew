@@ -8,7 +8,7 @@ from dew.dependencygraph import DependencyGraph
 from dew.dependencyprocessor import DependencyProcessor
 from dew.depstate import DependencyStateController
 from dew.dewfile import DewFile, Dependency
-from dew.exceptions import BuildError
+from dew.exceptions import BuildError, DewfileError
 from dew.storage import StorageController
 from dew.view import View
 
@@ -51,7 +51,13 @@ class ProjectProcessor(object):
                     self.view.info(f'Dependency {label} already pulled.')
 
                 if dep_processor.has_dewfile():
-                    dewfile_stack.append((dep_processor.get_dewfile(), label))
+                    try:
+                        child_dewfile = dep_processor.get_dewfile()
+                    except DewfileError as e:
+                        self.view.dewfile_error(e)
+                        raise
+
+                    dewfile_stack.append((child_dewfile, label))
 
         for name, processor in dependency_processors.items():
             label = processor.get_label()
@@ -90,12 +96,8 @@ class ProjectProcessor(object):
             self.depstates.add(label)
 
         if len(deps_needing_build) > 0:
-            # Final prefix only contains files from top-level dependencies. That's how dew works, okay?
-            top_level_labels: List[str] = []
-            for dep in self.root_dewfile.dependencies:
-                top_level_labels.append(self.make_processor(dep, self.root_dewfile).get_label())
-
-            self.update_final_prefix(top_level_labels)
+            self.view.info('Updating final prefix')
+            self.update_final_prefix(labels_in_order)
 
     def make_processor(self, dep: Dependency, dewfile: DewFile) -> DependencyProcessor:
         local_override = dewfile.local_overrides.get(dep.name)
