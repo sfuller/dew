@@ -22,13 +22,20 @@ def fetch(origin: git.Remote, refspec: Optional[str] = None) -> None:
         origin.fetch()
 
 
-def checkout(repo: git.Repo, origin: git.Remote, ref: str) -> None:
-    if repo.head.name != 'dew-head':
-        head = repo.create_head(path='dew-head', commit=ref)
-        head.checkout(force=True)
+def checkout(repo: git.Repo, origin: git.Remote, head_name: str, ref: str) -> None:
+    if not repo.head.is_valid() or repo.head.commit.hexsha != ref:
+        head = repo.create_head(path=head_name, commit=ref)
+
+        tracking_ref = None
+        for remote_ref in origin.refs:
+            if remote_ref.remote_head == head_name:
+                tracking_ref = remote_ref
+                break
+
+        head.set_tracking_branch(tracking_ref)
+        head.checkout()
 
     for submodule in repo.submodules:
-
         # Hack around gitpython bug: https://github.com/gitpython-developers/GitPython/issues/730
         if submodule.url.startswith('..'):
             submodule_repo_name = submodule.url[3:]  # Strip off '../'

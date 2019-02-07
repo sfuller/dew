@@ -8,7 +8,7 @@ from dew.builder.cmake import CMakeBuilder
 from dew.builder.makefile import MakefileBuilder
 from dew.builder.xcode import XcodeBuilder
 from dew.projectproperties import ProjectProperties
-from dew.dewfile import Dependency, DewFile
+from dew.dewfile import Dependency, DewFile, ProjectFilesParser
 from dew.exceptions import BuildError, PullError
 from dew.remote import Remote
 from dew.remote.git import GitRemote
@@ -27,13 +27,14 @@ class BuildSystem(Enum):
 
 class DependencyProcessor(object):
     def __init__(self, storage: StorageController, view: View, dependency: Dependency, dewfile: DewFile,
-                 options: ProjectProperties):
+                 options: ProjectProperties, source_dir: Optional[str] = None):
         self.storage = storage
         self.dependency = dependency
         self.dewfile = dewfile
         self.properties = options
         self.view = view
-        self._remote = None
+        self._remote: Optional[Remote] = None
+        self.source_dir = source_dir
 
     def pull(self):
         self.get_remote().pull()
@@ -59,7 +60,6 @@ class DependencyProcessor(object):
 
         self._remote = factory(
             dependency=self.dependency,
-            source_dir=self.get_buildfile_dir(),
             dest_dir=self.get_default_source_dir()
         )
         return self._remote
@@ -101,11 +101,14 @@ class DependencyProcessor(object):
     def get_dewfile(self) -> DewFile or None:
         dewfile_path = os.path.join(self.get_remote().get_source_dir(), 'dewfile.json')
         if os.path.isfile(dewfile_path):
-            return dew.dewfile.parse_dewfile_with_local_overlay(dewfile_path)
+            parser = ProjectFilesParser(dewfile_path)
+            return parser.parse()
         else:
             return None
 
     def get_default_source_dir(self):
+        if self.source_dir:
+            return self.source_dir
         return os.path.join(self.storage.get_sources_dir(), self.get_label())
 
     def get_buildfile_dir(self):

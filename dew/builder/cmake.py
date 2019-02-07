@@ -51,13 +51,11 @@ class CMakeBuilder(Builder):
             '-DCMAKE_PREFIX_PATH={0}'.format(';'.join(self.prefix_paths)),
             '-DCMAKE_MODULE_PATH={0}'.format(';'.join(module_paths)),
             '-DCMAKE_BUILD_TYPE=Debug',  # TODO: Support building dependencies in release mode.
-            '-DDEW_CMAKE_INTEGRATION_ENABLED=OFF'
-        ]
-        args.extend(self.dependency.build_arguments)
 
-        # Lots of projects default to build shared libs instead of static. Let's add some consistency.
-        # TODO: Need a system to choose the types of libraries desired.
-        args.append('-DBUILD_SHARED_LIBS=OFF')
+            # Lots of projects default to build shared libs instead of static. Let's add some consistency.
+            # TODO: Need a system to choose the types of libraries desired.
+            '-DBUILD_SHARED_LIBS=OFF'
+        ]
 
         # Setup environment
         env = {

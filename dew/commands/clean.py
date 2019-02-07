@@ -1,6 +1,7 @@
 import argparse
+
+import dew.command
 from dew.impl import CommandData
-from dew.projectproperties import ProjectProperties
 
 
 class ArgumentData(object):
@@ -8,15 +9,11 @@ class ArgumentData(object):
         pass
 
 
-def get_argparser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(add_help=False)
-    return parser
+class Command(dew.command.Command):
+    def get_argparser(self) -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser(add_help=False)
+        return parser
 
-
-def set_properties_from_args(args: ArgumentData, properties: ProjectProperties) -> None:
-    pass
-
-
-def execute(args: ArgumentData, data: CommandData) -> int:
-    data.view.error('Not implemented yet')
-    return 1
+    def execute(self, args: ArgumentData, data: CommandData) -> int:
+        data.view.error('Not implemented yet')
+        return 1

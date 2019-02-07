@@ -1,9 +1,8 @@
 import argparse
-import dew.args
+import dew.command
 from dew.dependencyprocessor import DependencyProcessor
 from dew.dewfile import Dependency
 from dew.impl import CommandData
-from dew.projectproperties import ProjectProperties
 
 
 class ArgumentData(object):
@@ -11,46 +10,39 @@ class ArgumentData(object):
         self.name = ''
 
 
-def get_argparser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('name')
-    return parser
+class Command(dew.command.Command):
 
+    def get_argparser(self) -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('name')
+        return parser
 
-def set_properties_from_args(args: ArgumentData, properties: ProjectProperties) -> None:
-    pass
+    def execute(self, args: ArgumentData, data: CommandData) -> int:
+        dewfile = data.project_parser.parse()
 
+        target_dep: Dependency = None
+        for dep in dewfile.dependencies:
+            if dep.name == args.name:
+                target_dep = dep
 
-def execute(args: ArgumentData, data: CommandData) -> int:
-    dewfile_path = 'dewfile.json'
-    if data.args.dewfile:
-        dewfile_path = data.args.dewfile
+        if target_dep is None:
+            data.view.error(f'Unknown dependency "{args.name}"')
+            return 1
 
-    dewfile = dew.dewfile.parse_dewfile(dewfile_path)
+        previous_ref = target_dep.ref
 
-    target_dep: Dependency = None
-    for dep in dewfile.dependencies:
-        if dep.name == args.name:
-            target_dep = dep
+        processor = DependencyProcessor(data.storage, data.view, target_dep, dewfile, data.properties)
+        target_dep.ref = processor.get_remote().get_latest_ref()
+        data.project_parser.save(dewfile)
 
-    if target_dep is None:
-        data.view.error(f'Unknown dependency "{args.name}"')
-        return 1
+        if previous_ref != target_dep.ref:
+            data.view.info(
+                f'Dependency {args.name} upgraded.\n'
+                f'Head:         {target_dep.head}\n'
+                f'Previous ref: {previous_ref}\n'
+                f'New ref:      {target_dep.ref}'
+            )
+        else:
+            data.view.info(f'Dependency {args.name} is already at latest ref {previous_ref} for head {target_dep.head}')
 
-    previous_ref = target_dep.ref
-
-    processor = DependencyProcessor(data.storage, data.view, target_dep, dewfile, data.properties)
-    target_dep.ref = processor.get_remote().get_latest_ref()
-    dew.dewfile.save_refs(dewfile, dewfile_path)
-
-    if previous_ref != target_dep.ref:
-        data.view.info(
-            f'Dependency {args.name} upgraded.\n'
-            f'Head:         {target_dep.head}\n'
-            f'Previous ref: {previous_ref}\n'
-            f'New ref:      {target_dep.ref}'
-        )
-    else:
-        data.view.info(f'Dependency {args.name} is already at latest ref {previous_ref} for head {target_dep.head}')
-
-    return 0
+        return 0

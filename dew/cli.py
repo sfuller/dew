@@ -7,6 +7,9 @@ from typing import Dict, Union, Optional, List
 
 import dew.args
 from dew.args import ArgumentData, CommandType
+from dew.command import Command
+from dew.dewfile import ProjectFilesParser
+from dew.exceptions import DewfileError, DewError
 from dew.projectproperties import ProjectPropertiesController
 from dew.impl import CommandData
 from dew.storage import StorageController
@@ -16,6 +19,8 @@ import dew.commands.update
 import dew.commands.bootstrap
 import dew.commands.clean
 import dew.commands.upgrade
+import dew.commands.workon
+import dew.commands.finish
 
 
 # TODO: Import these dynamically
@@ -23,7 +28,9 @@ command_module_map = {
     CommandType.UPDATE: dew.commands.update,
     CommandType.BOOTSTRAP: dew.commands.bootstrap,
     CommandType.CLEAN: dew.commands.clean,
-    CommandType.UPGRADE: dew.commands.upgrade
+    CommandType.UPGRADE: dew.commands.upgrade,
+    CommandType.WORKON: dew.commands.workon,
+    CommandType.FINISH: dew.commands.finish
 }
 
 
@@ -72,43 +79,52 @@ def main() -> int:
         args.command = CommandType.UPDATE
 
     command_module = command_module_map.get(args.command)
+    command = command_module.Command()
 
     if command_module is None:
         view.error(f'Don\'t know how to handle command {args.command.value}! This is a bug.')
         return 1
 
     command_args = command_module.ArgumentData()
-    command_argparser = get_module_argparser(command_module)
+    command_argparser = command.get_argparser()
     # noinspection PyTypeChecker
     command_argparser.parse_args(remaining_args, namespace=command_args)
 
     storage = get_storage(args)
-    properties = get_properties(args, storage, command_args, command_module)
-    command_data = CommandData(args, view, storage, properties)
+    properties = get_properties(args, storage, command_args, command)
+    project_parser = ProjectFilesParser(args.dewfile)
 
-    return command_module.execute(command_args, command_data)
+    command_data = CommandData(args, view, storage, properties, project_parser)
+
+    try:
+        return command.execute(command_args, command_data)
+    except DewfileError as e:
+        view.dewfile_error(e)
+        return 1
+    except DewError:
+        view.error('Dew did not finish successfully :(')
+        return 1
+    finally:
+        command.cleanup(command_args, command_data)
 
 
-def get_module_argparser(module) -> argparse.ArgumentParser:
-    return module.get_argparser()
-
-
-def help(view: View, command: Optional[str], parser: argparse.ArgumentParser) -> None:
+def help(view: View, command_name: Optional[str], parser: argparse.ArgumentParser) -> None:
     command_type = None
-    if command is not None:
+    if command_name is not None:
         for e in CommandType:
-            if e.value == command:
+            if e.value == command_name:
                 command_type = e
                 break
 
         if command_type is None:
-            view.error(f'{command} is not a command!')
+            view.error(f'{command_name} is not a command!')
             return
 
     if command_type is not None:
         command_module = command_module_map.get(command_type)
-        command_parser = get_module_argparser(command_module)
-        module_help(view, command, command_parser)
+        command = command_module.Command()
+        command_parser = command.get_argparser()
+        module_help(view, command_name, command_parser)
         return
 
     parser.print_help()
@@ -131,7 +147,7 @@ def get_storage(args: ArgumentData) -> StorageController:
     return storage
 
 
-def get_properties(args: ArgumentData, storage: StorageController, command_args, command_module) -> ProjectPropertiesController:
+def get_properties(args: ArgumentData, storage: StorageController, command_args, command: Command) -> ProjectPropertiesController:
     controller = ProjectPropertiesController(storage)
     controller.load()
     properties = controller.get()
@@ -141,7 +157,7 @@ def get_properties(args: ArgumentData, storage: StorageController, command_args,
             properties.options[define] = True
 
     properties.options.update(get_builtin_options())
-    command_module.set_properties_from_args(command_args, properties)
+    command.set_properties_from_args(command_args, properties)
     controller.set(properties)
     return controller
 

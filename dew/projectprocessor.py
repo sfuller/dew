@@ -151,10 +151,12 @@ class ProjectProcessor(object):
         if not success:
             raise BuildError(f'Failed while installing files')
 
-    def update_refs(self) -> DewFile:
+    def update_refs(self) -> Tuple[DewFile, bool]:
+        have_refs_changed = False
         for dep in self.root_dewfile.dependencies:
             if not dep.ref:
                 self.view.info(f'Dependency {dep.name} does not have an assigned ref, fetching one now.')
                 processor = DependencyProcessor(self.storage, self.view, dep, self.root_dewfile, self.options)
                 dep.ref = processor.get_remote().get_latest_ref()
-        return self.root_dewfile
+                have_refs_changed = True
+        return self.root_dewfile, have_refs_changed

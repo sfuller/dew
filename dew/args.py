@@ -8,6 +8,8 @@ class CommandType(enum.Enum):
     BOOTSTRAP = 'bootstrap'
     CLEAN = 'clean'
     UPGRADE = 'upgrade'
+    WORKON = 'workon'
+    FINISH = 'finish'
 
 
 class ArgumentData(object):
@@ -17,7 +19,7 @@ class ArgumentData(object):
         self.verbose = False
         self.version = False
         self.defines: List[str] = []
-        self.dewfile = ''
+        self.dewfile = 'dewfile.json'
         self.output_path = ''
         self.update_dummy_file = ''
 
