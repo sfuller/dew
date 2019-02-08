@@ -6,7 +6,7 @@ from dew.projectproperties import ProjectProperties
 
 
 class Command(object):
-    def get_argparser(self) -> argparse.ArgumentParser:
+    def setup_argparser(self, parser: argparse.ArgumentParser) -> None:
         pass
 
     def set_properties_from_args(self, args: ArgumentData, properties: ProjectProperties) -> None:

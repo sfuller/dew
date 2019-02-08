@@ -2,8 +2,7 @@ import sys
 
 import argparse
 import os
-import platform
-from typing import Dict, Union, Optional, List
+from typing import Optional, List
 
 import dew.args
 from dew.args import ArgumentData, CommandType
@@ -59,7 +58,7 @@ def main() -> int:
             positional = arg
             break
 
-    if '--version' in argv:
+    if '--version' in argv or '-v' in argv:
         print(f'dew {dew.VERSION_MAJOR}.{dew.VERSION_MINOR}.{dew.VERSION_PATCH}')
         return 0
 
@@ -86,12 +85,12 @@ def main() -> int:
         return 1
 
     command_args = command_module.ArgumentData()
-    command_argparser = command.get_argparser()
+    command_argparser = get_command_argparser(args.command.value, command)
     # noinspection PyTypeChecker
     command_argparser.parse_args(remaining_args, namespace=command_args)
 
     storage = get_storage(args)
-    properties = get_properties(args, storage, command_args, command)
+    properties = get_properties(storage, command_args, command)
     project_parser = ProjectFilesParser(args.dewfile)
 
     command_data = CommandData(args, view, storage, properties, project_parser)
@@ -123,7 +122,7 @@ def help(view: View, command_name: Optional[str], parser: argparse.ArgumentParse
     if command_type is not None:
         command_module = command_module_map.get(command_type)
         command = command_module.Command()
-        command_parser = command.get_argparser()
+        command_parser = get_command_argparser(command_name, command)
         module_help(view, command_name, command_parser)
         return
 
@@ -131,8 +130,13 @@ def help(view: View, command_name: Optional[str], parser: argparse.ArgumentParse
     view.info('\nSpecify a command with the help flag for help on a specific command.')
 
 
+def get_command_argparser(command_name: str, command: Command) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f'dew {command_name}', add_help=False)
+    command.setup_argparser(parser)
+    return parser
+
+
 def module_help(view: View, name: str, parser: argparse.ArgumentParser) -> None:
-    print(f'Help for command "{name}":')
     parser.print_help()
 
 
@@ -147,27 +151,13 @@ def get_storage(args: ArgumentData) -> StorageController:
     return storage
 
 
-def get_properties(args: ArgumentData, storage: StorageController, command_args, command: Command) -> ProjectPropertiesController:
+def get_properties(storage: StorageController, command_args, command: Command) -> ProjectPropertiesController:
     controller = ProjectPropertiesController(storage)
     controller.load()
     properties = controller.get()
-
-    if args.defines is not None:
-        for define in args.defines:
-            properties.options[define] = True
-
-    properties.options.update(get_builtin_options())
     command.set_properties_from_args(command_args, properties)
     controller.set(properties)
     return controller
-
-
-def get_builtin_options() -> Dict[str, Union[str, bool]]:
-    options = {}
-    if platform.system() == 'Darwin':
-        if len(platform.mac_ver()[0]) > 0:
-            options['DEW_PLATFORM_MACOS'] = True
-    return options
 
 
 def main_with_exit() -> None:

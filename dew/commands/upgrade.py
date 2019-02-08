@@ -12,10 +12,8 @@ class ArgumentData(object):
 
 class Command(dew.command.Command):
 
-    def get_argparser(self) -> argparse.ArgumentParser:
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument('name')
-        return parser
+    def setup_argparser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('name', metavar='DEPENDENCY', help='Name of the dependency to upgrade')
 
     def execute(self, args: ArgumentData, data: CommandData) -> int:
         dewfile = data.project_parser.parse()

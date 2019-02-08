@@ -22,14 +22,12 @@ class Command(dew.command.Command):
     def __init__(self) -> None:
         self.depstates: Optional[DependencyStateController] = None
 
-    def get_argparser(self) -> argparse.ArgumentParser:
-        parser = argparse.ArgumentParser(add_help=False)
+    def setup_argparser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument('--CC', dest='c_compiler_path', help='Path to the C compiler')
         parser.add_argument('--CXX', dest='cxx_compiler_path', help='Path to the CXX compiler')
-        parser.add_argument('--prefix', dest='additional_prefix_paths', action='append')
-        parser.add_argument('--cmake-generator')
-        parser.add_argument('--cmake-executable')
-        return parser
+        parser.add_argument('--prefix', dest='additional_prefix_paths', action='append', metavar='PREFIX_PATH')
+        parser.add_argument('--cmake-generator', help='The CMake generator to use for dependency projects')
+        parser.add_argument('--cmake-executable', help='Path to the CMake executable')
 
     def set_properties_from_args(self, args: ArgumentData, properties: ProjectProperties) -> None:
         if args.cmake_generator:
@@ -66,12 +64,6 @@ class Command(dew.command.Command):
             data.project_parser.save_refs(dewfile)
 
         project_processor.process()
-
-        dummy_file_path = data.args.update_dummy_file
-        if dummy_file_path:
-            with open(dummy_file_path, 'a'):
-                os.utime(dummy_file_path, None)
-
         return 0
 
     def cleanup(self, args: ArgumentData, data: CommandData) -> None:
