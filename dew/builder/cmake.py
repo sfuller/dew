@@ -61,7 +61,8 @@ class CMakeBuilder(Builder):
         env = {
             'PATH': os.environ.get('PATH'),
             'CC': self.properties.c_compiler_path,
-            'CXX': self.properties.cxx_compiler_path
+            'CXX': self.properties.cxx_compiler_path,
+            'INVOKED_BY_DEW': 'true'  # Set this environment variable to alert the dew CMake modules to no-op.
         }
 
         # Configure
