@@ -15,11 +15,11 @@ from dew.view import View
 
 class ProjectProcessor(object):
 
-    def __init__(self, storage: StorageController, options: ProjectProperties, view: View,
+    def __init__(self, storage: StorageController, properties: ProjectProperties, view: View,
                  depstates: DependencyStateController):
         self.storage = storage
         self.root_dewfile: Optional[DewFile] = None
-        self.options = options
+        self.properties = properties
         self.view = view
         self.depstates = depstates
 
@@ -88,7 +88,6 @@ class ProjectProcessor(object):
             shutil.rmtree(output_prefix)
 
             input_prefixes = [self.get_isolated_prefix(l) for l in child_labels]
-            input_prefixes.extend(self.options.prefixes)
 
             # Build and install
             dep_processor.build(output_prefix, input_prefixes)
@@ -105,10 +104,10 @@ class ProjectProcessor(object):
             dep = copy.deepcopy(dep)
             dep.type = 'local'
             dep.url = local_override
-            dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+            dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.properties)
             dep.ref = dep_processor.get_remote().get_latest_ref()
 
-        dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.options)
+        dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.properties)
         return dep_processor
 
     def get_isolated_prefix(self, label: str) -> str:
@@ -156,7 +155,7 @@ class ProjectProcessor(object):
         for dep in self.root_dewfile.dependencies:
             if not dep.ref:
                 self.view.info(f'Dependency {dep.name} does not have an assigned ref, fetching one now.')
-                processor = DependencyProcessor(self.storage, self.view, dep, self.root_dewfile, self.options)
+                processor = DependencyProcessor(self.storage, self.view, dep, self.root_dewfile, self.properties)
                 dep.ref = processor.get_remote().get_latest_ref()
                 have_refs_changed = True
         return self.root_dewfile, have_refs_changed

@@ -87,8 +87,7 @@ class DependencyProcessor(object):
             buildfile_dir=source_dir,
             build_dir=self.storage.get_build_dir(self.get_label()),
             install_dir=install_dir,
-            prefix_paths=input_prefixes,
-            dependency=self.dependency,
+            additional_prefix_paths=input_prefixes,
             properties=self.properties,
             caller=caller,
             view=self.view

@@ -20,6 +20,7 @@ import dew.commands.clean
 import dew.commands.upgrade
 import dew.commands.workon
 import dew.commands.finish
+import dew.commands.build
 
 
 # TODO: Import these dynamically
@@ -29,7 +30,8 @@ command_module_map = {
     CommandType.CLEAN: dew.commands.clean,
     CommandType.UPGRADE: dew.commands.upgrade,
     CommandType.WORKON: dew.commands.workon,
-    CommandType.FINISH: dew.commands.finish
+    CommandType.FINISH: dew.commands.finish,
+    CommandType.BUILD: dew.commands.build
 }
 
 

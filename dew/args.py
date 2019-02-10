@@ -10,6 +10,7 @@ class CommandType(enum.Enum):
     UPGRADE = 'upgrade'
     WORKON = 'workon'
     FINISH = 'finish'
+    BUILD = 'build'
 
 
 class ArgumentData(object):
