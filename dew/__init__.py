@@ -17,4 +17,4 @@ limitations under the License.
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 7
-VERSION_PATCH = 1
+VERSION_PATCH = 2
