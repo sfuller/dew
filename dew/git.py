@@ -1,4 +1,4 @@
-import os
+import posixpath
 
 from typing import Optional, Tuple
 
@@ -39,8 +39,8 @@ def checkout(repo: git.Repo, origin: git.Remote, head_name: str, ref: str) -> No
         # Hack around gitpython bug: https://github.com/gitpython-developers/GitPython/issues/730
         if submodule.url.startswith('..'):
             submodule_repo_name = submodule.url[3:]  # Strip off '../'
-            repo_parent_url, _ = os.path.split(origin.url)
-            actual_url = os.path.join(repo_parent_url, submodule_repo_name)
+            repo_parent_url, _ = posixpath.split(origin.url)
+            actual_url = posixpath.join(repo_parent_url, submodule_repo_name)
             with submodule.config_writer() as writer:
                 writer.set('url', actual_url)
 
