@@ -1,5 +1,5 @@
 import multiprocessing
-import os
+import os, pathlib, posixpath
 from typing import Iterable, Optional
 
 from dew.exceptions import BuildError
@@ -19,10 +19,10 @@ class CMakeBuilder(Builder):
                  view: View,
                  additional_prefix_paths: Iterable[str] = ()
                  ) -> None:
-        self.buildfile_dir = os.path.abspath(buildfile_dir)
-        self.build_dir = os.path.abspath(build_dir)
+        self.buildfile_dir = pathlib.PurePath(os.path.abspath(buildfile_dir)).as_posix()
+        self.build_dir = pathlib.PurePath(os.path.abspath(build_dir)).as_posix()
         if install_dir:
-            self.install_dir = os.path.abspath(install_dir)
+            self.install_dir = pathlib.PurePath(os.path.abspath(install_dir)).as_posix()
         else:
             self.install_dir = None
         self.properties = properties
@@ -44,8 +44,9 @@ class CMakeBuilder(Builder):
 
         prefix_paths = self.properties.prefixes.copy()
         prefix_paths.extend(self.additional_prefix_paths)
+        prefix_paths = [pathlib.PurePath(prefix).as_posix() for prefix in prefix_paths]
 
-        module_paths = [os.path.join(prefix, 'share', 'cmake', 'Modules') for prefix in prefix_paths]
+        module_paths = [posixpath.join(prefix, 'share', 'cmake', 'Modules') for prefix in prefix_paths]
 
         generator = self.properties.cmake_generator
         if not generator:
@@ -72,7 +73,6 @@ class CMakeBuilder(Builder):
 
         # Setup environment
         env = {
-            'PATH': os.environ.get('PATH'),
             'CC': self.properties.c_compiler_path,
             'CXX': self.properties.cxx_compiler_path,
             'INVOKED_BY_DEW': 'true'  # Set this environment variable to alert the dew CMake modules to no-op.

@@ -49,7 +49,7 @@ def parse_dependency(obj: Dict[str, Any]) -> Dependency:
     dep.url = obj['url']
     dep.type = obj['type']
     dep.head = obj['head']
-    dep.ref = obj.get('ref', '')
+    dep.ref = obj['ref']
     dep.buildfile_dir = obj.get('buildfile_dir', '')
     return dep
 

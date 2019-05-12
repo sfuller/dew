@@ -20,6 +20,9 @@ class SubprocessCaller(object):
              error_exception: Type[Exception],
              env: Optional[Dict[str, str]] = None
              ) -> None:
+        merged_env = dict(os.environ)
+        if env is not None:
+            merged_env.update(env)
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
 
         output_file = subprocess.PIPE
@@ -27,7 +30,7 @@ class SubprocessCaller(object):
             output_file = None
 
         proc = subprocess.run(
-            args, cwd=cwd, stdout=output_file, stderr=output_file, env=env,
+            args, cwd=cwd, stdout=output_file, stderr=output_file, env=merged_env,
             universal_newlines=True
         )
 
