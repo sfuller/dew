@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, os
 from typing import List, Type, Optional, Dict
 
 from dew.view import View
@@ -20,9 +20,11 @@ class SubprocessCaller(object):
              error_exception: Type[Exception],
              env: Optional[Dict[str, str]] = None
              ) -> None:
-        merged_env = dict(os.environ)
         if env is not None:
+            merged_env = dict(os.environ)
             merged_env.update(env)
+        else:
+            merged_env = os.environ
         self.view.verbose('Calling subprocess: "{0}", cwd: {1}'.format(repr(args), repr(cwd)))
 
         output_file = subprocess.PIPE
@@ -35,7 +37,7 @@ class SubprocessCaller(object):
         )
 
         self.view.verbose(f'Process output:\n{proc.stdout}')
-        self.view.verbose(f'Precess stderr:\n{proc.stderr}')
+        self.view.verbose(f'Process stderr:\n{proc.stderr}')
 
         if proc.returncode is not 0:
             if len(proc.stderr) > 0:

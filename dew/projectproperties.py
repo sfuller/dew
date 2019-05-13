@@ -1,10 +1,13 @@
 import copy
 import json
 import os.path
-from typing import Dict, Union, Any, List
+from typing import Dict, Union, Any, List, Tuple
 
-from dew.storage import StorageController
+from dew.storage import StorageController, BuildType
 
+BUILD_TYPE_TUPLES = {'debug':(BuildType.Debug,),
+                     'release':(BuildType.Release,),
+                     'both':(BuildType.Debug, BuildType.Release)}
 
 class ProjectProperties(object):
     def __init__(self):
@@ -14,7 +17,10 @@ class ProjectProperties(object):
         self.cxx_compiler_path = ''
         self.prefixes: List[str] = []
         self.options: Dict[str, Union[str, bool]] = {}
+        self.build_type = 'both'
 
+    def active_build_types(self) -> Tuple[BuildType]:
+        return BUILD_TYPE_TUPLES[self.build_type]
 
 class ProjectPropertiesController(object):
     def __init__(self, storage: StorageController):
@@ -55,6 +61,9 @@ class ProjectPropertiesController(object):
         properties.cxx_compiler_path = data.get('cxx_compiler_path', '')
         properties.prefixes = list(data.get('prefixes', []))
         properties.options = dict(data.get('options', {}))
+        properties.build_type = data.get('build_type', 'both')
+        if properties.build_type not in ('debug', 'release', 'both'):
+            properties.build_type = 'both'
         return properties
 
     def to_dict(self, properties: ProjectProperties) -> Dict[str, str]:
@@ -65,6 +74,7 @@ class ProjectPropertiesController(object):
         data['cxx_compiler_path'] = properties.cxx_compiler_path
         data['prefixes'] = properties.prefixes.copy()
         data['options'] = copy.deepcopy(properties.options)
+        data['build_type'] = properties.build_type
         return data
 
     def get_cache_file_path(self) -> str:

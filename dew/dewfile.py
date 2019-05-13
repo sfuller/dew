@@ -5,32 +5,55 @@ from typing import List, Any, Dict
 
 from dew.exceptions import DewfileError, DewError
 
+class Dependency(object):
+    def __init__(self) -> None:
+        self.name: str = ''
+        self.url: str = ''
+        self.type: str = ''
+        self.head: str = ''
+        self.ref: str = ''
+        self.buildfile_dir: str = ''
+        self.dependson: List[Dependency] = []
+        self.cmake_defines: Dict[str, str] = {}
+
+    def get_version(self) -> str:
+        return f'{self.type}_{self.ref}'
+
+    def get_label(self) -> str:
+        name = self.name
+        version = self.get_version()
+        return f'{name}_{version}'
 
 class DewFile(object):
-    def __init__(self) -> None:
+    def __init__(self, path: str) -> None:
+        self.path = path
         self.dependencies: List[Dependency] = []
         self.local_overrides: Dict[str, str] = {}
 
+    def find_dependency(self, name: str) -> Dependency:
+        try:
+            return next(d for d in self.dependencies if d.name == name)
+        except Exception as e:
+            raise DewfileError(self.path, sys.exc_info()[2], f'"{name}" not found') from e
 
-class Dependency(object):
-    def __init__(self) -> None:
-        self.name = ''
-        self.url = ''
-        self.type = ''
-        self.head = ''
-        self.ref = ''
-        self.buildfile_dir = ''
-
-
-def _parse_dewfile(data: Dict[str, Any]) -> DewFile:
+def _parse_dewfile(data: Dict[str, Any], path: str) -> DewFile:
     dependencies = []
     dependencies_obj = data['dependencies']
 
+    # 1st pass: parse dependencies
     for dep in dependencies_obj:
         dependencies.append(parse_dependency(dep))
 
-    dewfile = DewFile()
+    dewfile = DewFile(path)
     dewfile.dependencies = dependencies
+
+    # 2nd pass: resolve manual dependencies
+    for dep in dewfile.dependencies:
+        resolved_deps = []
+        for dfdep in dep.dependson:
+            resolved_deps.append(dewfile.find_dependency(dfdep))
+        dep.dependson = resolved_deps
+
     return dewfile
 
 
@@ -51,6 +74,12 @@ def parse_dependency(obj: Dict[str, Any]) -> Dependency:
     dep.head = obj['head']
     dep.ref = obj['ref']
     dep.buildfile_dir = obj.get('buildfile_dir', '')
+    dependson = obj.get('dependson', [])
+    if dependson: # Resolved into List[Dependency] in _parse_dewfile
+        dep.dependson = [str(d) for d in dependson]
+    cmake_defines = obj.get('cmake_defines', {})
+    if cmake_defines:
+        dep.cmake_defines = {str(k):str(v) for k, v in cmake_defines.items()}
     return dep
 
 
@@ -66,6 +95,10 @@ def serialize_dependency(dep: Dependency) -> Dict[str, Any]:
         data['ref'] = dep.ref
     if dep.buildfile_dir:
         data['buildfile_dir'] = dep.buildfile_dir
+    if dep.dependson:
+        data['dependson'] = [d.name for d in dep.dependson]
+    if dep.cmake_defines:
+        data['cmake_defines'] = dep.cmake_defines
 
     return data
 
@@ -73,7 +106,7 @@ def serialize_dependency(dep: Dependency) -> Dict[str, Any]:
 def parse_dewfile(path: str) -> DewFile:
     try:
         dewfile_data = load_json(path)
-        dewfile = _parse_dewfile(dewfile_data)
+        dewfile = _parse_dewfile(dewfile_data, path)
     except Exception as e:
         raise DewfileError(path, sys.exc_info()[2]) from e
     return dewfile
