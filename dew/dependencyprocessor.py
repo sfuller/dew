@@ -13,7 +13,7 @@ from dew.exceptions import BuildError, PullError
 from dew.remote import Remote
 from dew.remote.git import GitRemote
 from dew.remote.local import LocalRemote
-from dew.storage import StorageController
+from dew.storage import StorageController, BuildType
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
 
@@ -39,8 +39,8 @@ class DependencyProcessor(object):
     def pull(self):
         self.get_remote().pull()
 
-    def build(self, install_dir: str, input_prefixes: Iterable[str]):
-        self.get_builder(install_dir, input_prefixes).build()
+    def build(self, install_dir: str, input_prefixes: Iterable[str], build_type: BuildType):
+        self.get_builder(install_dir, input_prefixes, build_type).build()
 
     def get_remote(self) -> Optional[Remote]:
         if self._remote:
@@ -64,7 +64,8 @@ class DependencyProcessor(object):
         )
         return self._remote
 
-    def get_builder(self, install_dir: str, input_prefixes: Iterable[str]) -> Optional[Builder]:
+    def get_builder(self, install_dir: str, input_prefixes: Iterable[str],
+                    build_type: BuildType) -> Optional[Builder]:
         remote = self.get_remote()
         source_dir = remote.get_source_dir()
         buildsystem = self.get_buildsystem(source_dir)
@@ -85,12 +86,14 @@ class DependencyProcessor(object):
 
         return factory(
             buildfile_dir=source_dir,
-            build_dir=self.storage.get_build_dir(self.get_label()),
+            build_dir=self.storage.get_build_dir(self.get_label(), build_type),
             install_dir=install_dir,
             additional_prefix_paths=input_prefixes,
+            build_type=build_type,
             properties=self.properties,
             caller=caller,
-            view=self.view
+            view=self.view,
+            additional_cmake_defines=self.dependency.cmake_defines
         )
 
     def has_dewfile(self) -> bool:
@@ -138,9 +141,7 @@ class DependencyProcessor(object):
             )
 
     def get_version(self) -> str:
-        return f'{self.dependency.type}_{self.dependency.ref}'
+        return self.dependency.get_version()
 
     def get_label(self) -> str:
-        name = self.dependency.name
-        version = self.get_version()
-        return f'{name}_{version}'
+        return self.dependency.get_label()

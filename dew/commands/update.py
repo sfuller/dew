@@ -16,6 +16,7 @@ class ArgumentData(object):
         self.c_compiler_path = ''
         self.cxx_compiler_path = ''
         self.additional_prefix_paths: List[str] = []
+        self.build_type = ''
 
 
 class Command(dew.command.Command):
@@ -28,6 +29,7 @@ class Command(dew.command.Command):
         parser.add_argument('--prefix', dest='additional_prefix_paths', action='append', metavar='PREFIX_PATH')
         parser.add_argument('--cmake-generator', help='The CMake generator to use for dependency projects')
         parser.add_argument('--cmake-executable', help='Path to the CMake executable')
+        parser.add_argument('--build-type', help='"debug", "release", or "both"')
 
     def set_properties_from_args(self, args: ArgumentData, properties: ProjectProperties) -> None:
         if args.cmake_generator:
@@ -40,6 +42,8 @@ class Command(dew.command.Command):
             properties.cxx_compiler_path = args.cxx_compiler_path
         if args.additional_prefix_paths:
             properties.prefixes = args.additional_prefix_paths
+        if args.build_type:
+            properties.build_type = args.build_type
 
     def execute(self, args: ArgumentData, data: CommandData) -> int:
         dewfile = data.project_parser.parse()

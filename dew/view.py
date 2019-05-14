@@ -26,3 +26,5 @@ class View(object):
         message = ''.join(traceback.format_exception(type(e.__cause__), e.__cause__, e.inner_tb))
         self.error(message)
         self.error(f'Failed to parse dewfile at path {e.file_path}')
+        if e.reason:
+            self.error(e.reason)

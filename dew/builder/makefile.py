@@ -5,14 +5,17 @@ from dew.projectproperties import ProjectProperties
 from dew.dewfile import Dependency
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
+from dew.storage import BuildType
 
 
 class MakefileBuilder(Builder):
-    def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
-                 options: ProjectProperties, caller: SubprocessCaller, view: View, prefix_paths: Iterable[str]) -> None:
+    def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, build_type: BuildType,
+                 dependency: Dependency, options: ProjectProperties, caller: SubprocessCaller,
+                 view: View, prefix_paths: Iterable[str]) -> None:
         self.buildfile_dir = buildfile_dir
         self.build_dir = build_dir
         self.install_dir = install_dir
+        self.build_type = build_type
         self.dependency = dependency
         self.options = options
         self.caller = caller

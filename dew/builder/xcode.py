@@ -6,14 +6,17 @@ from dew.dewfile import Dependency
 from dew.exceptions import BuildError
 from dew.subprocesscaller import SubprocessCaller
 from dew.view import View
+from dew.storage import BuildType
 
+XCODE_BUILD_TYPES = {BuildType.Debug:'Debug', BuildType.Release:'Release'}
 
 class XcodeBuilder(Builder):
-    def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, dependency: Dependency,
-                 options: ProjectProperties, caller: SubprocessCaller, view: View) -> None:
+    def __init__(self, buildfile_dir: str, build_dir: str, install_dir: str, build_type: BuildType,
+                 dependency: Dependency, options: ProjectProperties, caller: SubprocessCaller, view: View) -> None:
         self.buildfile_dir = buildfile_dir
         self.build_dir = build_dir
         self.install_dir = install_dir
+        self.build_type = build_type
         self.dependency = dependency
         self.options = options
         self.caller = caller
@@ -37,6 +40,7 @@ class XcodeBuilder(Builder):
         self.caller.call(
             [
                 'xcodebuild', '-project', xcodeproj_path,
+                '-configuration', XCODE_BUILD_TYPES[self.build_type],
                 'OBJROOT=' + os.path.join(build_dir, 'Intermediates'),
                 'BUILD_DIR=' + os.path.join(build_dir, 'Products'),
                 'SYMROOT=' + os.path.join(build_dir, 'Products'),

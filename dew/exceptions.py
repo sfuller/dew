@@ -13,7 +13,8 @@ class BuildError(DewError):
 
 
 class DewfileError(DewError):
-    def __init__(self, file_path: str, inner_tb) -> None:
+    def __init__(self, file_path: str, inner_tb, reason = None) -> None:
         self.file_path = file_path
         self.inner_tb = inner_tb
+        self.reason = reason
         super().__init__()

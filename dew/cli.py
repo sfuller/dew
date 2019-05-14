@@ -102,8 +102,8 @@ def main() -> int:
     except DewfileError as e:
         view.dewfile_error(e)
         return 1
-    except DewError:
-        view.error('Dew did not finish successfully :(')
+    except DewError as e:
+        view.error(f'Dew did not finish successfully :(\n{e}')
         return 1
     finally:
         command.cleanup(command_args, command_data)

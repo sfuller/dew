@@ -9,7 +9,7 @@ from dew.dependencyprocessor import DependencyProcessor
 from dew.depstate import DependencyStateController
 from dew.dewfile import DewFile, Dependency
 from dew.exceptions import BuildError, DewfileError
-from dew.storage import StorageController
+from dew.storage import StorageController, BuildType, BUILD_TYPE_NAMES
 from dew.view import View
 
 
@@ -42,6 +42,10 @@ class ProjectProcessor(object):
                 label = dep_processor.get_label()
                 dependency_processors[label] = dep_processor
                 graph.add_dependency(label, parent_name)
+
+                # Connect manual dewfile dependencies
+                for dfdep in dep.dependson:
+                    graph.add_dependency(dfdep.get_label(), label)
 
                 # if the dependency is up to date, don't bother pulling, as it's already been pulled.
                 if not self.depstates.get_state(label):
@@ -82,21 +86,25 @@ class ProjectProcessor(object):
                 self.view.info(f'Dependency {label} already built.')
                 continue
 
-            # Prepare output prefix
+            # Prepare output prefixes
             child_labels = [n.name for n in node.children]
-            output_prefix = self.get_isolated_prefix(label)
-            shutil.rmtree(output_prefix)
 
-            input_prefixes = [self.get_isolated_prefix(l) for l in child_labels]
+            for build_type in self.properties.active_build_types():
+                self.view.info(f'Building {BUILD_TYPE_NAMES[build_type]}...')
+                output_prefix = self.get_isolated_prefix(label, build_type)
+                shutil.rmtree(output_prefix)
 
-            # Build and install
-            dep_processor.build(output_prefix, input_prefixes)
+                input_prefixes = [self.get_isolated_prefix(l, build_type) for l in child_labels]
+
+                # Build and install
+                dep_processor.build(output_prefix, input_prefixes, build_type)
 
             self.depstates.add(label)
 
         if len(deps_needing_build) > 0:
-            self.view.info('Updating final prefix')
-            self.update_final_prefix(labels_in_order)
+            for build_type in self.properties.active_build_types():
+                self.view.info(f'Updating final {BUILD_TYPE_NAMES[build_type]} prefix')
+                self.update_final_prefix(labels_in_order, build_type)
 
     def make_processor(self, dep: Dependency, dewfile: DewFile) -> DependencyProcessor:
         local_override = dewfile.local_overrides.get(dep.name)
@@ -110,18 +118,18 @@ class ProjectProcessor(object):
         dep_processor = DependencyProcessor(self.storage, self.view, dep, dewfile, self.properties)
         return dep_processor
 
-    def get_isolated_prefix(self, label: str) -> str:
-        path = os.path.join(self.storage.get_output_prefix_dir(), label)
+    def get_isolated_prefix(self, label: str, type: BuildType) -> str:
+        path = os.path.join(self.storage.get_output_prefix_dir(type), label)
         os.makedirs(path, exist_ok=True)
         return path
 
-    def update_final_prefix(self, labels: Iterable[str]):
+    def update_final_prefix(self, labels: Iterable[str], build_type: BuildType):
         success = True
-        dst_prefix = self.storage.get_install_dir()
+        dst_prefix = self.storage.get_install_dir(build_type)
         installed_files: Dict[str, str] = {}
 
         for label in labels:
-            src_prefix = self.get_isolated_prefix(label)
+            src_prefix = self.get_isolated_prefix(label, build_type)
 
             for dirpath, dirnames, filenames in os.walk(src_prefix):
                 relpath = os.path.relpath(dirpath, src_prefix)
