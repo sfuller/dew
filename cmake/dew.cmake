@@ -17,8 +17,14 @@ function(integrate_dew)
         return()
     endif()
 
+    if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+        set(dew_cmake_prefix_suffix debug)
+    else()
+        set(dew_cmake_prefix_suffix release)
+    endif()
+
     set(dew_output_path "${CMAKE_CURRENT_SOURCE_DIR}/.dew")
-    set(dew_cmake_prefix_path "${dew_output_path}/prefix")
+    set(dew_cmake_prefix_path "${dew_output_path}/prefix-${dew_cmake_prefix_suffix}")
     set(dew_cmake_module_path "${dew_cmake_prefix_path}/share/cmake/Modules")
 
     #
