@@ -1,4 +1,4 @@
-import os.path
+import os, os.path
 import shutil
 from typing import Callable
 from enum import Enum
@@ -13,8 +13,22 @@ class StorageController(object):
     def __init__(self, path):
         self.path = path
 
+    def _makedirs(self, p):
+        os.makedirs(p, exist_ok=True)
+        if os.name == 'nt':
+            import ctypes
+            def _ensurehidden(p):
+                if os.path.basename(p).startswith('.'):
+                    FILE_ATTRIBUTE_HIDDEN = 0x02
+                    ctypes.windll.kernel32.SetFileAttributesW(p, FILE_ATTRIBUTE_HIDDEN)
+            _ensurehidden(p)
+            s = os.path.split(p)
+            while s[1]:
+                _ensurehidden(s[0])
+                s = os.path.split(s[0])
+
     def ensure_directories_exist(self):
-        self.walk_directories(lambda p: os.makedirs(p, exist_ok=True))
+        self.walk_directories(lambda p: self._makedirs(p))
 
     def clean(self):
         self.walk_directories(lambda p: shutil.rmtree(p))
