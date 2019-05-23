@@ -71,4 +71,5 @@ function(integrate_dew)
         set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${dew_cmake_module_path}" CACHE PATH "" FORCE)
     endif()
 
+    set(DEW_CMAKE_PREFIX_PATH ${dew_cmake_prefix_path} PARENT_SCOPE)
 endfunction()
