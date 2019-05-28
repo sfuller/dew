@@ -44,7 +44,7 @@ def checkout(repo: git.Repo, origin: git.Remote, head_name: str, ref: str) -> No
             with submodule.config_writer() as writer:
                 writer.set('url', actual_url)
 
-        print(f'Processing submodule {submodule.name}')
+        print(f'Processing submodule {submodule.name}', flush=True)
         submodule.update(init=True)
 
 
