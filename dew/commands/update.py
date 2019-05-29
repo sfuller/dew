@@ -1,6 +1,7 @@
 import os
 import argparse
 from typing import List, Optional
+import fasteners
 
 import dew.command
 from dew.depstate import DependencyStateController
@@ -46,28 +47,42 @@ class Command(dew.command.Command):
             properties.build_type = args.build_type
 
     def execute(self, args: ArgumentData, data: CommandData) -> int:
-        dewfile = data.project_parser.parse()
-        depstates = DependencyStateController(data.storage)
-        self.depstates = depstates
-        depstates.load()
+        lock_path = data.storage.join_storage_dir_path('lock')
+        lock = fasteners.InterProcessLock(lock_path)
 
-        is_dirty = data.properties.dirty
-        if is_dirty:
-            data.view.info('Dew project properties have changed. Clearing dependency state information.')
-            depstates.clear()
-            depstates.save()
+        lock_acquired = lock.acquire(blocking=False)
+        try:
+            if not lock_acquired:
+                data.view.info('Waiting for another dew to complete. Press Ctrl-C to abort.')
+                lock_acquired = lock.acquire()
 
-        data.properties.save()
-        properties = data.properties.get()
+            dewfile = data.project_parser.parse()
+            depstates = DependencyStateController(data.storage)
+            self.depstates = depstates
+            depstates.load()
 
-        project_processor = ProjectProcessor(data.storage, properties, data.view, depstates)
-        project_processor.set_data(dewfile)
+            is_dirty = data.properties.dirty
+            if is_dirty:
+                data.view.info('Dew project properties have changed. Clearing dependency state information.')
+                depstates.clear()
+                depstates.save()
 
-        dewfile, refs_have_changed = project_processor.update_refs()
-        if refs_have_changed:
-            data.project_parser.save_refs(dewfile)
+            data.properties.save()
+            properties = data.properties.get()
 
-        project_processor.process()
+            project_processor = ProjectProcessor(data.storage, properties, data.view, depstates)
+            project_processor.set_data(dewfile)
+
+            dewfile, refs_have_changed = project_processor.update_refs()
+            if refs_have_changed:
+                data.project_parser.save_refs(dewfile)
+
+            project_processor.process()
+
+        finally:
+            if lock_acquired:
+                lock.release()
+
         return 0
 
     def cleanup(self, args: ArgumentData, data: CommandData) -> None:
