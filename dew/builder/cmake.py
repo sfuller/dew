@@ -122,7 +122,7 @@ def guess_generator() -> Optional[str]:
 
     paths = os.environ.get('PATH', '').split(os.pathsep)
     if os.name == 'nt':
-        extensions = os.environ.get('PATHEXT').split(';')
+        extensions = [ext.lower() for ext in os.environ.get('PATHEXT').split(';')]
     else:
         extensions = ['']
 
@@ -132,11 +132,14 @@ def guess_generator() -> Optional[str]:
                 filename, ext = os.path.splitext(entry)
                 if filename != name:
                     continue
-                if ext not in extensions:
+                if ext.lower() not in extensions:
                     continue
                 return True
+        return False
 
-    if locate('make'):
+    if locate('ninja'):
+        guess = 'Ninja'
+    elif locate('make'):
         guess = 'Unix Makefiles'
     elif locate('mingw32-make'):
         guess = 'MinGW Makefiles'

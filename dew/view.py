@@ -12,11 +12,11 @@ class View(object):
         self.show_verbose = False
 
     def info(self, message):
-        print(message)
+        print(message, flush=True)
 
     def verbose(self, message):
         if self.show_verbose:
-            print(message)
+            print(message, flush=True)
 
     def error(self, message):
         sys.stderr.write(message)
