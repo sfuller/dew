@@ -128,6 +128,8 @@ def guess_generator() -> Optional[str]:
 
     def locate(name: str) -> bool:
         for path in paths:
+            if not os.path.isdir(path):
+                continue
             for entry in os.listdir(path):
                 filename, ext = os.path.splitext(entry)
                 if filename != name:
