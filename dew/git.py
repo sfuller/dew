@@ -36,16 +36,16 @@ def checkout(repo: git.Repo, origin: git.Remote, head_name: str, ref: str) -> No
         head.checkout()
 
     for submodule in repo.submodules:
-        # Hack around gitpython bug: https://github.com/gitpython-developers/GitPython/issues/730
-        if submodule.url.startswith('..'):
-            submodule_repo_name = submodule.url[3:]  # Strip off '../'
-            repo_parent_url, _ = posixpath.split(origin.url)
-            actual_url = posixpath.join(repo_parent_url, submodule_repo_name)
-            with submodule.config_writer() as writer:
-                writer.set('url', actual_url)
-
         print(f'Processing submodule {submodule.name}', flush=True)
-        submodule.update(init=True)
+
+        # Calling git directly for own submodules since using relative path is not working in gitpython
+        # see https://github.com/gitpython-developers/GitPython/issues/730
+        if submodule.url[0:3] == '../':
+            repo.git.submodule('init', submodule.name)
+            repo.git.submodule('update', submodule.name)
+        # For external submodules we can use the update function of gitpython
+        else:
+            submodule.update(init=True)
 
 
 def get_repo(url: str, destination_dir: str) -> Tuple[git.Repo, git.Remote]:

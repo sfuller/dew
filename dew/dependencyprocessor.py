@@ -100,7 +100,7 @@ class DependencyProcessor(object):
         dewfile_path = os.path.join(self.get_remote().get_source_dir(), 'dewfile.json')
         return os.path.isfile(dewfile_path)
 
-    def get_dewfile(self) -> DewFile or None:
+    def get_dewfile(self) -> Optional[DewFile]:
         dewfile_path = os.path.join(self.get_remote().get_source_dir(), 'dewfile.json')
         if os.path.isfile(dewfile_path):
             parser = ProjectFilesParser(dewfile_path)

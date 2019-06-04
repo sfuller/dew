@@ -1,13 +1,13 @@
 import os
 import argparse
 from typing import List, Optional
-import fasteners
 
 import dew.command
 from dew.depstate import DependencyStateController
 from dew.impl import CommandData
 from dew.projectprocessor import ProjectProcessor
 from dew.projectproperties import ProjectProperties
+from dew.lockfile import LockFile
 
 
 class ArgumentData(object):
@@ -47,15 +47,7 @@ class Command(dew.command.Command):
             properties.build_type = args.build_type
 
     def execute(self, args: ArgumentData, data: CommandData) -> int:
-        lock_path = data.storage.join_storage_dir_path('lock')
-        lock = fasteners.InterProcessLock(lock_path)
-
-        lock_acquired = lock.acquire(blocking=False)
-        try:
-            if not lock_acquired:
-                data.view.info('Waiting for another dew to complete. Press Ctrl-C to abort.')
-                lock_acquired = lock.acquire()
-
+        with LockFile(data.storage.join_storage_dir_path('lock'), data):
             dewfile = data.project_parser.parse()
             depstates = DependencyStateController(data.storage)
             self.depstates = depstates
@@ -78,10 +70,6 @@ class Command(dew.command.Command):
                 data.project_parser.save_refs(dewfile)
 
             project_processor.process()
-
-        finally:
-            if lock_acquired:
-                lock.release()
 
         return 0
 
