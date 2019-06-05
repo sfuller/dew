@@ -16,5 +16,5 @@ limitations under the License.
 """
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 9
-VERSION_PATCH = 1
+VERSION_MINOR = 10
+VERSION_PATCH = 0
