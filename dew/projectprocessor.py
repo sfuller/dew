@@ -7,7 +7,7 @@ from dew.projectproperties import ProjectProperties
 from dew.dependencygraph import DependencyGraph
 from dew.dependencyprocessor import DependencyProcessor
 from dew.depstate import DependencyStateController
-from dew.dewfile import DewFile, Dependency
+from dew.dewfile import DewFile, Dependency, ProjectFilesParser
 from dew.exceptions import BuildError, DewfileError
 from dew.storage import StorageController, BuildType, BUILD_TYPE_NAMES
 from dew.view import View
@@ -37,6 +37,14 @@ class ProjectProcessor(object):
 
         while len(dewfile_stack) > 0:
             dewfile, parent_name = dewfile_stack.pop()
+
+            for subdir in dewfile.subdirectories:
+                dewfile_path = os.path.join(os.path.dirname(dewfile.path), subdir, 'dewfile.json')
+                if os.path.isfile(dewfile_path):
+                    parser = ProjectFilesParser(dewfile_path)
+                    child_dewfile = parser.parse()
+                    dewfile_stack.append((child_dewfile, None))
+
             for dep in dewfile.dependencies:
                 dep_processor = self.make_processor(dep, dewfile)
                 label = dep_processor.get_label()

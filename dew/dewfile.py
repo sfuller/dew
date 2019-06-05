@@ -27,6 +27,7 @@ class Dependency(object):
 class DewFile(object):
     def __init__(self, path: str) -> None:
         self.path = path
+        self.subdirectories: List[str] = []
         self.dependencies: List[Dependency] = []
         self.local_overrides: Dict[str, str] = {}
 
@@ -37,14 +38,27 @@ class DewFile(object):
             raise DewfileError(self.path, sys.exc_info()[2], f'"{name}" not found') from e
 
 def _parse_dewfile(data: Dict[str, Any], path: str) -> DewFile:
+    subdirectories = []
+    if 'subdirectories' in data:
+        subdirectories = [str(subdir) for subdir in data['subdirectories']]
+
+    # Ensure subdirectories are valid before proceeding
+    for subdir in subdirectories:
+        dewfile_path = os.path.join(os.path.dirname(path), subdir, 'dewfile.json')
+        if not os.path.isfile(dewfile_path):
+            raise DewfileError(path, sys.exc_info()[2], f'subdirectory file "{dewfile_path}" does not exist')
+
     dependencies = []
-    dependencies_obj = data['dependencies']
+    dependencies_obj = []
+    if 'dependencies' in data:
+        dependencies_obj = data['dependencies']
 
     # 1st pass: parse dependencies
     for dep in dependencies_obj:
         dependencies.append(parse_dependency(dep))
 
     dewfile = DewFile(path)
+    dewfile.subdirectories = subdirectories
     dewfile.dependencies = dependencies
 
     # 2nd pass: resolve manual dependencies
@@ -62,7 +76,10 @@ def serialize_dewfile(dewfile: DewFile) -> Dict[str, Any]:
     dependencies = []
     for dep in dewfile.dependencies:
         dependencies.append(serialize_dependency(dep))
-    data['dependencies'] = dependencies
+    if len(dewfile.subdirectories):
+        data['subdirectories'] = dewfile.subdirectories
+    if len(dependencies):
+        data['dependencies'] = dependencies
     return data
 
 
@@ -107,6 +124,8 @@ def parse_dewfile(path: str) -> DewFile:
     try:
         dewfile_data = load_json(path)
         dewfile = _parse_dewfile(dewfile_data, path)
+    except DewfileError as e:
+        raise DewfileError(path, sys.exc_info()[2], e.reason) from e
     except Exception as e:
         raise DewfileError(path, sys.exc_info()[2]) from e
     return dewfile
