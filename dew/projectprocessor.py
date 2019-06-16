@@ -33,7 +33,8 @@ class ProjectProcessor(object):
         dependency_processors: Dict[str, DependencyProcessor] = {}
 
         graph = DependencyGraph()
-        deps_needing_build: Set[str] = set()
+        active_build_types = self.properties.active_build_types()
+        deps_needing_build: Dict[BuildType, Set[str]] = {tp:set() for tp in active_build_types}
 
         while len(dewfile_stack) > 0:
             dewfile, parent_name = dewfile_stack.pop()
@@ -56,7 +57,7 @@ class ProjectProcessor(object):
                     graph.add_dependency(dfdep.get_label(), label)
 
                 # if the dependency is up to date, don't bother pulling, as it's already been pulled.
-                if not self.depstates.get_state(label):
+                if not self.depstates.get_any_state(label):
                     self.view.info('Pulling dependency {0}...'.format(label))
                     dep_processor.pull()
                 else:
@@ -73,8 +74,9 @@ class ProjectProcessor(object):
 
         for name, processor in dependency_processors.items():
             label = processor.get_label()
-            if not self.depstates.get_state(label):
-                deps_needing_build.add(label)
+            for build_type in active_build_types:
+                if not self.depstates.get_state(build_type, label):
+                    deps_needing_build[build_type].add(label)
 
         labels_in_order = graph.resolve()
 
@@ -90,14 +92,22 @@ class ProjectProcessor(object):
                 self.view.info(f'* which is needed by {parent_node.name}')
                 parent_node = parent_node.parent
 
-            if label not in deps_needing_build:
+            needs_build = False
+            for (k,v) in deps_needing_build.items():
+                if label in v:
+                    needs_build = True
+                    break
+            if not needs_build:
                 self.view.info(f'Dependency {label} already built.')
                 continue
 
             # Prepare output prefixes
             child_labels = [n.name for n in node.children]
 
-            for build_type in self.properties.active_build_types():
+            for build_type in active_build_types:
+                if label not in deps_needing_build[build_type]:
+                    continue
+
                 self.view.info(f'Building {BUILD_TYPE_NAMES[build_type]}...')
                 output_prefix = self.get_isolated_prefix(label, build_type)
                 shutil.rmtree(output_prefix)
@@ -107,10 +117,10 @@ class ProjectProcessor(object):
                 # Build and install
                 dep_processor.build(output_prefix, input_prefixes, build_type)
 
-            self.depstates.add(label)
+                self.depstates.add(build_type, label)
 
-        if len(deps_needing_build) > 0:
-            for build_type in self.properties.active_build_types():
+        for build_type in active_build_types:
+            if len(deps_needing_build[build_type]) > 0:
                 self.view.info(f'Updating final {BUILD_TYPE_NAMES[build_type]} prefix')
                 self.update_final_prefix(labels_in_order, build_type)
 
