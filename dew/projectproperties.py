@@ -105,6 +105,10 @@ class ProjectPropertiesController(object):
 
     def are_dicts_different(self, dict_a: Dict[str, Any], dict_b: Dict[str, Any]) -> bool:
         for name, value in dict_a.items():
+            # Exclude build_type from marking project cache dirty, relevant files are kept separate
+            if name == 'build_type':
+                continue
+
             other_value = dict_b.get(name)
 
             if self.are_objects_different(value, other_value):
