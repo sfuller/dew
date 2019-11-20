@@ -18,6 +18,22 @@ function(integrate_dew)
     endif()
 
     #
+    # Advise the user that setting the build type is necessary for debug dependencies.
+    #
+    if (NOT CMAKE_BUILD_TYPE)
+        message(WARNING "CMAKE_BUILD_TYPE is not set. Dew will build release dependencies by default.")
+    endif()
+
+    #
+    # Acquaint CMake with dew prefix
+    #
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
+        set(dew_cmake_prefix_suffix debug)
+    else()
+        set(dew_cmake_prefix_suffix release)
+    endif()
+
+    #
     # Run dew update
     #
     option(DEW_AUTOUPDATE "Automatically update dew prefixes as part of cmake generation." ON)
@@ -32,20 +48,13 @@ function(integrate_dew)
             message(FATAL_ERROR "Failed to install dew with pip: result: ${install_dew_result}.")
         endif()
         message(STATUS "Building dew dependencies")
-        execute_process(COMMAND "${Python3_EXECUTABLE}" -m dew update WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        execute_process(COMMAND "${Python3_EXECUTABLE}" -m dew update --CC "${CMAKE_C_COMPILER}"
+                        --CXX "${CMAKE_CXX_COMPILER}" --build-type ${dew_cmake_prefix_suffix}
+                        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
                         RESULT_VARIABLE dew_res)
         if(NOT dew_res EQUAL 0)
             message(FATAL_ERROR "Unable to run dew: ${dew_res}")
         endif()
-    endif()
-
-    #
-    # Acquaint CMake with dew prefix
-    #
-    if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
-        set(dew_cmake_prefix_suffix debug)
-    else()
-        set(dew_cmake_prefix_suffix release)
     endif()
 
     set(dew_output_path "${CMAKE_CURRENT_SOURCE_DIR}/.dew")
