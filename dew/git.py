@@ -41,11 +41,10 @@ def checkout(repo: git.Repo, origin: git.Remote, head_name: str, ref: str) -> No
         # Calling git directly for own submodules since using relative path is not working in gitpython
         # see https://github.com/gitpython-developers/GitPython/issues/730
         if submodule.url[0:3] == '../':
-            repo.git.submodule('init', submodule.name)
-            repo.git.submodule('update', submodule.name)
+            repo.git.submodule('update', '--init', '--recursive', submodule.name)
         # For external submodules we can use the update function of gitpython
         else:
-            submodule.update(init=True)
+            submodule.update(init=True, recursive=True)
 
 
 def get_repo(url: str, destination_dir: str) -> Tuple[git.Repo, git.Remote]:
